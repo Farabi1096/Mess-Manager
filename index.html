@@ -103,7 +103,6 @@ export default function App() {
 
   const [mealExceptions, setMealExceptions] = useState([]);
   
-  // New State for Month Selection and Historical Finance Data
   const [selectedFinanceMonth, setSelectedFinanceMonth] = useState('2026-03');
   const historicalFinances = {
     '2026-02': [
@@ -135,7 +134,6 @@ export default function App() {
   const selectedDayName = daysOfWeek[selectedDateObj.getDay()];
   const isToday = selectedDateStr === getFormattedDateStr(new Date());
 
-  // New State for Daily Menus
   const [dailyMenus, setDailyMenus] = useState({
     [getFormattedDateStr(new Date())]: {
       breakfast: "Paratha, Egg & Dal Bhuna",
@@ -254,7 +252,6 @@ export default function App() {
   };
 
   const handleToggleSettle = (memberId, isSettling) => {
-    // Non-destructive settlement: stores the difference so it can be undone
     setMemberFinances(prev => prev.map(m => {
       if (m.id !== memberId) return m;
       return {
@@ -448,10 +445,8 @@ export default function App() {
 
         <div className="flex flex-col gap-4">
           {displayFinances.map(member => {
-            // Calculate effective balance including any temporary settlement adjustments
             const effectiveBazar = member.bazarAmount + (member.settlementAdjustment || 0);
             const balance = effectiveBazar - member.mealCost;
-            
             const isReturnable = balance > 0;
             const isPayable = balance < 0;
             const absBalance = Math.abs(balance);
@@ -860,16 +855,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-0 sm:p-4 font-sans text-gray-800">
-      <div className="w-full max-w-[400px] h-[100dvh] sm:h-[800px] bg-[#FAFAFA] sm:rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col border border-gray-200">
+    <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center sm:p-4 font-sans text-gray-800">
+      {/* Main App Wrapper: 
+        - Takes full width and height on mobile (no margins, no rounded corners)
+        - Becomes a floating box on larger screens (max-w, rounded, shadow)
+      */}
+      <div className="w-full h-[100dvh] sm:h-[800px] sm:max-w-[400px] bg-[#FAFAFA] sm:rounded-[2.5rem] sm:shadow-2xl relative overflow-hidden flex flex-col sm:border sm:border-gray-200 transition-all">
         
-        {/* Ambient Top Glow / Sparkle Background */}
+        {/* Ambient Top Glow */}
         <div className="absolute top-0 inset-x-0 h-56 pointer-events-none overflow-hidden z-0">
-          <div className="absolute -top-16 -left-16 w-48 h-48 bg-[#0060E5]/15 rounded-full blur-[40px]"></div>
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FC0075]/10 rounded-full blur-[40px]"></div>
-          <div className="absolute top-4 left-1/4 w-32 h-32 bg-[#86DEF7]/20 rounded-full blur-[35px]"></div>
+          <div className="absolute -top-16 -left-16 w-48 h-48 bg-[#0060E5]/10 rounded-full blur-[40px]"></div>
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FC0075]/05 rounded-full blur-[40px]"></div>
         </div>
 
+        {/* Content Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {activeTab === 'home' && <HomeTab />}
           {activeTab === 'meals' && <MealsTab />}
@@ -886,24 +885,24 @@ export default function App() {
               ></div>
             )}
 
-            <div className={`absolute bottom-[215px] right-6 flex flex-col gap-3 items-end z-30 transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+            <div className={`absolute bottom-[230px] right-6 flex flex-col gap-4 items-end z-30 transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
               <button 
                 onClick={() => { setModalType('bazar'); setIsFabOpen(false); }}
-                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-md border border-gray-100 text-[#052065] font-medium hover:bg-gray-50"
+                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-lg border border-gray-100 text-[#052065] font-semibold hover:bg-gray-50 active:scale-95 transition-all"
               >
                 <span className="text-sm">Add Bazar</span>
                 <ShoppingCart size={18} className="text-[#0060E5]" />
               </button>
               <button 
                 onClick={() => { setModalType('menu'); setIsFabOpen(false); }}
-                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-md border border-gray-100 text-[#052065] font-medium hover:bg-gray-50"
+                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-lg border border-gray-100 text-[#052065] font-semibold hover:bg-gray-50 active:scale-95 transition-all"
               >
                 <span className="text-sm">Set Menu</span>
                 <Coffee size={18} className="text-[#0060E5]" />
               </button>
               <button 
                 onClick={() => { setModalType('meal'); setIsFabOpen(false); }}
-                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-md border border-gray-100 text-[#052065] font-medium hover:bg-gray-50"
+                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-lg border border-gray-100 text-[#052065] font-semibold hover:bg-gray-50 active:scale-95 transition-all"
               >
                 <span className="text-sm">Add Meal</span>
                 <CheckCircle2 size={18} className="text-[#0060E5]" />
@@ -912,41 +911,39 @@ export default function App() {
 
             <button 
               onClick={() => setIsFabOpen(!isFabOpen)}
-              className={`absolute bottom-32 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 active:scale-95 z-40 ${isFabOpen ? 'rotate-45 bg-white text-[#052065] border border-gray-200' : 'bg-[#0060E5] text-white hover:bg-[#052065]'}`}
+              className={`absolute bottom-[130px] right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-xl shadow-[#0060E5]/30 transition-all duration-300 active:scale-90 z-40 ${isFabOpen ? 'rotate-45 bg-white text-[#052065] border border-gray-100' : 'bg-[#0060E5] text-white hover:bg-[#052065]'}`}
             >
-              <Plus size={24} strokeWidth={2} />
+              <Plus size={26} strokeWidth={2.5} />
             </button>
           </>
         )}
 
-        <div className="absolute bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-100 px-6 pt-4 pb-10 sm:pb-6 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-          <div className="flex justify-between items-center">
-            
-            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
-              <Home size={22} strokeWidth={activeTab === 'home' ? 2 : 1.5} className={`transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Home</span>
+        {/* Bottom Navigation */}
+        <div className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 px-6 pt-4 pb-10 sm:pb-6 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex justify-between items-center max-w-sm mx-auto">
+            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1.5 w-16 group">
+              <Home size={22} strokeWidth={activeTab === 'home' ? 2.5 : 1.5} className={`transition-all ${activeTab === 'home' ? 'text-[#0060E5] scale-110' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-bold tracking-tight transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Home</span>
             </button>
             
-            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
-              <CalendarDays size={22} strokeWidth={activeTab === 'meals' ? 2 : 1.5} className={`transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Meals</span>
+            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1.5 w-16 group">
+              <CalendarDays size={22} strokeWidth={activeTab === 'meals' ? 2.5 : 1.5} className={`transition-all ${activeTab === 'meals' ? 'text-[#0060E5] scale-110' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-bold tracking-tight transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Meals</span>
             </button>
             
-            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
-              <Wallet size={22} strokeWidth={activeTab === 'expenses' ? 2 : 1.5} className={`transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Finance</span>
+            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1.5 w-16 group">
+              <Wallet size={22} strokeWidth={activeTab === 'expenses' ? 2.5 : 1.5} className={`transition-all ${activeTab === 'expenses' ? 'text-[#0060E5] scale-110' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-bold tracking-tight transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Finance</span>
             </button>
             
-            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
-              <User size={22} strokeWidth={activeTab === 'profile' ? 2 : 1.5} className={`transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Profile</span>
+            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1.5 w-16 group">
+              <User size={22} strokeWidth={activeTab === 'profile' ? 2.5 : 1.5} className={`transition-all ${activeTab === 'profile' ? 'text-[#0060E5] scale-110' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-bold tracking-tight transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Profile</span>
             </button>
-            
           </div>
         </div>
 
         <EntryModal />
-        
       </div>
     </div>
   );
@@ -960,5 +957,6 @@ export default function App() {
     </script>
 </body>
 </html>
+
 
 
