@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Finance Tracker</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0"
+        }
+    }
+    </script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Custom scrollbar and animations from your code */
+        .custom-scrollbar::-webkit-scrollbar { width: 0px; background: transparent; }
+        :root { --ease-ios: cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes pageEnter { from { opacity: 0; transform: scale(0.99) translateY(5px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes staggerIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes bounceIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+        .animate-page-enter { animation: pageEnter 0.4s var(--ease-ios) forwards; }
+        .animate-slide-up-fade { animation: slideUpFade 0.5s var(--ease-ios) backwards; }
+        .animate-stagger-in { animation: staggerIn 0.3s var(--ease-ios) forwards; }
+        .animate-scale-in { animation: scaleIn 0.4s var(--ease-ios) backwards; }
+        .animate-bounce-in { animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white h-screen overflow-hidden">
+    
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import { createRoot } from 'react-dom/client';
+        
+        // --- YOUR CODE STARTS HERE ---
+ import React, { useState } from 'react';
+import { 
+  Home, 
+  CalendarDays, 
+  Wallet, 
+  User, 
+  Plus, 
+  Coffee, 
+  Utensils, 
+  Moon, 
+  TrendingUp, 
+  ShoppingBag,
+  ChevronRight,
+  ChevronLeft,
+  Bell,
+  X,
+  ShoppingCart,
+  CheckCircle2,
+  MoreHorizontal
+} from 'lucide-react';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home');
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const [modalType, setModalType] = useState(null);
+  
+  const [expenses, setExpenses] = useState([
+    { id: 1, name: 'Rice & Oil', amount: 1250, date: 'Mar 04', memberName: 'Rakib Hasan' },
+    { id: 2, name: 'Vegetables & Fish', amount: 840, date: 'Mar 03', memberName: 'Sajid Ahmed' },
+    { id: 3, name: 'Chicken & Spices', amount: 1500, date: 'Mar 01', memberName: 'Tarikul Islam' },
+  ]);
+
+  const [memberFinances, setMemberFinances] = useState([
+    { id: 1, name: 'Rakib Hasan', bazarAmount: 3500, mealCost: 2800, totalMeals: 47.5 }, 
+    { id: 2, name: 'Sajid Ahmed', bazarAmount: 1500, mealCost: 2450, totalMeals: 41.5 }, 
+    { id: 3, name: 'Tarikul Islam', bazarAmount: 2200, mealCost: 2200, totalMeals: 37.5 }, 
+    { id: 4, name: 'Mehedi Hasan', bazarAmount: 0, mealCost: 1950, totalMeals: 33 },   
+  ]);
+
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const [memberSchedules, setMemberSchedules] = useState(() => {
+    return memberFinances.map(m => ({
+      memberId: m.id,
+      schedule: daysOfWeek.reduce((acc, day) => {
+        acc[day] = { breakfast: 1, lunch: 1, dinner: 1 };
+        return acc;
+      }, {})
+    }));
+  });
+  const [selectedScheduleMember, setSelectedScheduleMember] = useState(1);
+
+  const [holidays, setHolidays] = useState([
+    { id: 1, date: '2026-03-26', name: 'Independence Day' }
+  ]);
+
+  const [mealExceptions, setMealExceptions] = useState([]);
+  
+  const LOGGED_IN_USER_ID = 1; 
+  
+  const [selectedDateObj, setSelectedDateObj] = useState(new Date());
+
+  const getFormattedDateStr = (dateObj) => {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const selectedDateStr = getFormattedDateStr(selectedDateObj);
+  const selectedDayName = daysOfWeek[selectedDateObj.getDay()];
+  const isToday = selectedDateStr === getFormattedDateStr(new Date());
+
+  // New State for Daily Menus
+  const [dailyMenus, setDailyMenus] = useState({
+    [getFormattedDateStr(new Date())]: {
+      breakfast: "Paratha, Egg & Dal Bhuna",
+      lunch: "Beef Curry, Vorta & Rice",
+      dinner: "Chicken Curry & Onion Fry"
+    }
+  });
+
+  const isSelectedHoliday = holidays.some(h => h.date === selectedDateStr);
+  const baseSchedule = memberSchedules.find(m => m.memberId === LOGGED_IN_USER_ID)?.schedule[selectedDayName] || { breakfast: 0, lunch: 0, dinner: 0 };
+  const selectedException = mealExceptions.find(e => e.memberId === LOGGED_IN_USER_ID && e.date === selectedDateStr);
+
+  const displayedMeals = {
+    breakfast: isSelectedHoliday ? 0 : (selectedException?.breakfast !== undefined ? selectedException.breakfast : baseSchedule.breakfast),
+    lunch: isSelectedHoliday ? 0 : (selectedException?.lunch !== undefined ? selectedException.lunch : baseSchedule.lunch),
+    dinner: isSelectedHoliday ? 0 : (selectedException?.dinner !== undefined ? selectedException.dinner : baseSchedule.dinner),
+  };
+
+  const changeDate = (days) => {
+    const newDate = new Date(selectedDateObj);
+    newDate.setDate(newDate.getDate() + days);
+    setSelectedDateObj(newDate);
+  };
+
+  const handleMenuSubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const menuDate = fd.get('menuDate');
+    const menuB = fd.get('menuBreakfast');
+    const menuL = fd.get('menuLunch');
+    const menuD = fd.get('menuDinner');
+    
+    setDailyMenus(prev => ({
+      ...prev,
+      [menuDate]: {
+        breakfast: menuB || "Standard Menu",
+        lunch: menuL || "Standard Menu",
+        dinner: menuD || "Standard Menu"
+      }
+    }));
+    setModalType(null);
+  };
+
+  const handleBazarSubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const memberId = parseInt(fd.get('memberId'));
+    const amount = parseFloat(fd.get('amount'));
+    const itemName = fd.get('itemName');
+    const bazarDate = fd.get('bazarDate');
+
+    const dateObj = new Date(bazarDate);
+    const member = memberFinances.find(m => m.id === memberId);
+
+    const newExpense = {
+      id: Date.now(),
+      name: itemName,
+      amount: amount,
+      date: dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+      memberName: member ? member.name : 'Unknown'
+    };
+    setExpenses([newExpense, ...expenses]);
+
+    setMemberFinances(prev => prev.map(m => 
+      m.id === memberId ? { ...m, bazarAmount: m.bazarAmount + amount } : m
+    ));
+    setModalType(null);
+  };
+
+  const handleMealSubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const memberId = parseInt(fd.get('memberId'));
+    const mealCount = parseFloat(fd.get('mealCount'));
+    const currentRate = 58.50; 
+
+    setMemberFinances(prev => prev.map(m => 
+      m.id === memberId ? { ...m, mealCost: m.mealCost + (mealCount * currentRate), totalMeals: (m.totalMeals || 0) + mealCount } : m
+    ));
+    setModalType(null);
+  };
+
+  const handleHolidaySubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const newHoliday = {
+      id: Date.now(),
+      date: fd.get('holidayDate'),
+      name: fd.get('holidayName')
+    };
+    
+    setHolidays(prev => [...prev, newHoliday].sort((a, b) => new Date(a.date) - new Date(b.date)));
+    setModalType(null);
+  };
+
+  const handleOffDaySubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const memberId = parseInt(fd.get('memberId'));
+    const date = fd.get('offDate');
+    const mealType = fd.get('mealType'); 
+    
+    setMealExceptions(prev => {
+      const existingIdx = prev.findIndex(e => e.memberId === memberId && e.date === date);
+      const updates = mealType === 'all' ? { breakfast: 0, lunch: 0, dinner: 0 } : { [mealType]: 0 };
+      
+      let newList = [...prev];
+      if (existingIdx >= 0) {
+         newList[existingIdx] = { ...newList[existingIdx], ...updates };
+      } else {
+         newList.push({ id: Date.now(), memberId, date, ...updates });
+      }
+      return newList.sort((a, b) => new Date(a.date) - new Date(b.date));
+    });
+    setModalType(null);
+  };
+
+  // --- Components ---
+
+  const HomeTab = () => {
+    // Get the menu for the currently selected date, fallback to "Standard Menu"
+    const currentMenu = dailyMenus[selectedDateStr] || {
+      breakfast: "Standard Menu",
+      lunch: "Standard Menu",
+      dinner: "Standard Menu"
+    };
+
+    return (
+      <div className="flex flex-col gap-8 pb-24 pt-10 px-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-gray-500 text-xs tracking-wider uppercase font-semibold mb-1">Overview</p>
+            <h1 className="text-2xl font-bold text-[#052065] tracking-tight">Rakib Hasan</h1>
+          </div>
+          <button className="relative p-2 text-[#052065] hover:bg-gray-100 rounded-full transition">
+            <Bell size={22} strokeWidth={1.5} />
+            <span className="absolute top-1 right-2 w-2 h-2 bg-[#FC0075] rounded-full"></span>
+          </button>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex-1 bg-[#052065] p-5 rounded-2xl shadow-md flex flex-col justify-between">
+            <div className="flex items-center gap-2 mb-4 text-[#86DEF7]">
+              <Wallet size={16} strokeWidth={2} />
+              <p className="text-xs font-semibold uppercase tracking-wider">Total Cost</p>
+            </div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">৳ 3,240</h2>
+          </div>
+          <div className="flex-1 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center gap-2 mb-4 text-gray-400">
+              <TrendingUp size={16} strokeWidth={2} />
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Meal Rate</p>
+            </div>
+            <h2 className="text-2xl font-bold text-[#052065] tracking-tight">৳ 58.50</h2>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between items-end mb-4 border-b border-gray-100 pb-3">
+            <h3 className="text-base font-semibold text-[#052065]">
+              {isToday ? "Today's Meals" : "Daily Schedule"}
+            </h3>
+            <div className="flex items-center gap-2">
+              <button onClick={() => changeDate(-1)} className="p-1 text-gray-400 hover:text-[#052065] transition-colors">
+                <ChevronLeft size={18} strokeWidth={1.5} />
+              </button>
+              <span className="text-sm font-medium text-gray-700 min-w-[85px] text-center">
+                {selectedDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+              <button onClick={() => changeDate(1)} className="p-1 text-gray-400 hover:text-[#052065] transition-colors">
+                <ChevronRight size={18} strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            {/* Breakfast */}
+            <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                displayedMeals.breakfast > 0 
+                ? 'border-[#0060E5] bg-blue-50/30' 
+                : 'border-gray-100 bg-white'
+              }`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${displayedMeals.breakfast > 0 ? 'bg-[#0060E5]/10 text-[#0060E5]' : 'bg-gray-50 text-gray-400'}`}>
+                  <Coffee size={20} strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-sm font-bold ${displayedMeals.breakfast > 0 ? 'text-[#052065]' : 'text-gray-400'}`}>Breakfast</span>
+                  <span className="text-xs text-gray-500 mt-0.5">{currentMenu.breakfast}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                {displayedMeals.breakfast > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#0060E5] mb-1"></span>}
+                <span className={`text-sm font-bold ${displayedMeals.breakfast > 0 ? 'text-[#052065]' : 'text-gray-300'}`}>
+                  {displayedMeals.breakfast > 0 ? `${displayedMeals.breakfast} Meal` : 'Off'}
+                </span>
+              </div>
+            </div>
+
+            {/* Lunch */}
+            <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                displayedMeals.lunch > 0 
+                ? 'border-[#0060E5] bg-blue-50/30' 
+                : 'border-gray-100 bg-white'
+              }`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${displayedMeals.lunch > 0 ? 'bg-[#0060E5]/10 text-[#0060E5]' : 'bg-gray-50 text-gray-400'}`}>
+                  <Utensils size={20} strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-sm font-bold ${displayedMeals.lunch > 0 ? 'text-[#052065]' : 'text-gray-400'}`}>Lunch</span>
+                  <span className="text-xs text-gray-500 mt-0.5">{currentMenu.lunch}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                {displayedMeals.lunch > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#0060E5] mb-1"></span>}
+                <span className={`text-sm font-bold ${displayedMeals.lunch > 0 ? 'text-[#052065]' : 'text-gray-300'}`}>
+                  {displayedMeals.lunch > 0 ? `${displayedMeals.lunch} Meal` : 'Off'}
+                </span>
+              </div>
+            </div>
+
+            {/* Dinner */}
+            <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                displayedMeals.dinner > 0 
+                ? 'border-[#0060E5] bg-blue-50/30' 
+                : 'border-gray-100 bg-white'
+              }`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${displayedMeals.dinner > 0 ? 'bg-[#0060E5]/10 text-[#0060E5]' : 'bg-gray-50 text-gray-400'}`}>
+                  <Moon size={20} strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-sm font-bold ${displayedMeals.dinner > 0 ? 'text-[#052065]' : 'text-gray-400'}`}>Dinner</span>
+                  <span className="text-xs text-gray-500 mt-0.5">{currentMenu.dinner}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                {displayedMeals.dinner > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#0060E5] mb-1"></span>}
+                <span className={`text-sm font-bold ${displayedMeals.dinner > 0 ? 'text-[#052065]' : 'text-gray-300'}`}>
+                  {displayedMeals.dinner > 0 ? `${displayedMeals.dinner} Meal` : 'Off'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <div className="flex justify-between items-end mb-4 border-b border-gray-100 pb-3">
+            <h3 className="text-base font-semibold text-[#052065]">Recent Bazaar</h3>
+            <button className="text-gray-400 hover:text-[#0060E5] text-xs font-medium flex items-center transition-colors">
+              View All <ChevronRight size={14} className="ml-0.5" />
+            </button>
+          </div>
+          
+          <div className="flex flex-col gap-1">
+            {expenses.map((expense) => (
+              <div key={expense.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#0060E5]/10 flex items-center justify-center text-[#0060E5]">
+                    <ShoppingBag size={16} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-[#052065] text-sm">{expense.name}</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">{expense.date} • <span className="text-[#0060E5] font-medium">{expense.memberName}</span></p>
+                  </div>
+                </div>
+                <span className="font-bold text-[#052065] text-sm tracking-tight">৳{expense.amount}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ExpensesTab = () => (
+    <div className="flex flex-col gap-6 pb-24 pt-10 px-6">
+      <div className="border-b border-gray-100 pb-4">
+        <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Finances</h2>
+        <p className="text-sm text-gray-500 mt-1">Monthly mess balance summary</p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {memberFinances.map(member => {
+          const balance = member.bazarAmount - member.mealCost;
+          const isReturnable = balance > 0;
+          const isPayable = balance < 0;
+          const absBalance = Math.abs(balance);
+
+          return (
+            <div key={member.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-4">
+              <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#052065] text-white flex items-center justify-center font-semibold text-sm">
+                    {member.name.charAt(0)}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[#052065] block">{member.name}</span>
+                    <span className="text-xs text-gray-500 mt-0.5 block">{member.totalMeals || 0} meals consumed</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">Bazar Given</span>
+                  <span className="text-sm font-semibold text-[#052065]">৳{member.bazarAmount}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-end">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Meal Cost</span>
+                  <span className="text-sm font-semibold text-gray-700">৳{member.mealCost}</span>
+                </div>
+
+                {isReturnable && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-[#00B991] uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#00B991]"></span> Returnable
+                    </span>
+                    <span className="text-lg font-bold text-[#008848] tracking-tight">৳{absBalance}</span>
+                  </div>
+                )}
+
+                {isPayable && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-[#F33131] uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#F33131]"></span> Payable
+                    </span>
+                    <span className="text-lg font-bold text-[#F33131] tracking-tight">৳{absBalance}</span>
+                  </div>
+                )}
+
+                {balance === 0 && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Status</span>
+                    <span className="text-sm font-semibold text-gray-400">Settled</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const MealsTab = () => {
+    const currentSchedule = memberSchedules.find(s => s.memberId === selectedScheduleMember);
+
+    const cycleSchedule = (day, mealType) => {
+      setMemberSchedules(prev => prev.map(s => {
+        if (s.memberId !== selectedScheduleMember) return s;
+        const current = s.schedule[day][mealType];
+        let next = 0;
+        if (current === 0) next = 0.5;
+        else if (current === 0.5) next = 1;
+        else if (current === 1) next = 2;
+        else next = 0;
+        
+        return {
+          ...s,
+          schedule: {
+            ...s.schedule,
+            [day]: {
+              ...s.schedule[day],
+              [mealType]: next
+            }
+          }
+        };
+      }));
+    };
+
+    return (
+      <div className="flex flex-col gap-6 pb-24 pt-10 px-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Schedules</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage defaults and exceptions</p>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Select Member</label>
+          <div className="relative">
+            <select
+              value={selectedScheduleMember}
+              onChange={(e) => setSelectedScheduleMember(parseInt(e.target.value))}
+              className="w-full appearance-none border border-gray-200 rounded-xl p-4 text-[#052065] font-semibold bg-white shadow-sm focus:outline-none focus:border-[#0060E5] transition-colors"
+            >
+              {memberFinances.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+              <ChevronRight size={16} className="rotate-90" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="flex bg-gray-50 p-3 border-b border-gray-200">
+            <div className="w-12 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Day</div>
+            <div className="flex-1 flex justify-between px-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+              <span>Break</span>
+              <span>Lunch</span>
+              <span>Dinner</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            {daysOfWeek.map((day, idx) => (
+              <div key={day} className={`flex items-center p-3 ${idx !== daysOfWeek.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                <div className="w-12 font-medium text-[#052065] text-sm">{day}</div>
+                <div className="flex-1 flex justify-between gap-3 px-2">
+                  <button 
+                    onClick={() => cycleSchedule(day, 'breakfast')} 
+                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${currentSchedule.schedule[day].breakfast > 0 ? 'bg-[#0060E5] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                  >
+                    {currentSchedule.schedule[day].breakfast > 0 ? currentSchedule.schedule[day].breakfast : '-'}
+                  </button>
+                  <button 
+                    onClick={() => cycleSchedule(day, 'lunch')} 
+                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${currentSchedule.schedule[day].lunch > 0 ? 'bg-[#0060E5] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                  >
+                    {currentSchedule.schedule[day].lunch > 0 ? currentSchedule.schedule[day].lunch : '-'}
+                  </button>
+                  <button 
+                    onClick={() => cycleSchedule(day, 'dinner')} 
+                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${currentSchedule.schedule[day].dinner > 0 ? 'bg-[#0060E5] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                  >
+                    {currentSchedule.schedule[day].dinner > 0 ? currentSchedule.schedule[day].dinner : '-'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Meal Exceptions Section */}
+        <div className="mt-2">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-[#052065] uppercase tracking-wider">Specific Exceptions</h3>
+            <button 
+              onClick={() => setModalType('offDay')}
+              className="text-[#0060E5] hover:text-[#052065] transition-colors"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {mealExceptions.filter(o => o.memberId === selectedScheduleMember).length === 0 ? (
+              <p className="text-sm text-gray-400 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-center">No exceptions added</p>
+            ) : (
+              mealExceptions.filter(o => o.memberId === selectedScheduleMember).map(exc => {
+                let title = "";
+                if (exc.breakfast === 0 && exc.lunch === 0 && exc.dinner === 0) {
+                  title = "All Meals Off";
+                } else {
+                  const parts = [];
+                  if (exc.breakfast !== undefined) parts.push(`B:${exc.breakfast}`);
+                  if (exc.lunch !== undefined) parts.push(`L:${exc.lunch}`);
+                  if (exc.dinner !== undefined) parts.push(`D:${exc.dinner}`);
+                  title = parts.join(', ');
+                }
+                
+                return (
+                  <div key={exc.id} className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-[#052065] text-sm">{title}</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(exc.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setMealExceptions(prev => prev.filter(item => item.id !== exc.id))}
+                      className="text-gray-400 hover:text-[#F33131] transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Holidays Section */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-[#052065] uppercase tracking-wider">Mess Holidays</h3>
+            <button 
+              onClick={() => setModalType('holiday')}
+              className="text-[#0060E5] hover:text-[#052065] transition-colors"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {holidays.length === 0 ? (
+              <p className="text-sm text-gray-400 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-center">No upcoming holidays</p>
+            ) : (
+              holidays.map(h => (
+                <div key={h.id} className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                  <div>
+                    <h4 className="font-medium text-[#052065] text-sm">{h.name}</h4>
+                    <p className="text-xs text-[#F33131] mt-0.5 font-medium flex items-center gap-1">
+                       <span className="w-1.5 h-1.5 rounded-full bg-[#F33131]"></span> Closed on {new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setHolidays(prev => prev.filter(item => item.id !== h.id))}
+                    className="text-gray-400 hover:text-[#F33131] transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const PlaceholderTab = ({ title, icon: Icon }) => (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 h-full pb-24">
+      <div className="w-16 h-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center mb-4 text-gray-300">
+        <Icon size={24} strokeWidth={1.5} />
+      </div>
+      <h2 className="text-lg font-medium text-[#052065]">{title}</h2>
+      <p className="text-center text-gray-400 mt-1 text-sm">Under development</p>
+    </div>
+  );
+
+  const EntryModal = () => {
+    if (!modalType) return null;
+
+    return (
+      <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center transition-opacity">
+        <div className="bg-white w-full max-h-[90%] overflow-y-auto sm:w-[90%] rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-[#052065]">
+              {modalType === 'bazar' ? 'Add Bazar' : 
+               modalType === 'meal' ? 'Add Meal' : 
+               modalType === 'menu' ? 'Set Daily Menu' : 
+               modalType === 'offDay' ? 'Add Exception' : 'Add Holiday'}
+            </h2>
+            <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-gray-800 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+
+          {modalType === 'bazar' ? (
+            <form onSubmit={handleBazarSubmit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Member</label>
+                  <select name="memberId" required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors">
+                    <option value="">Select...</option>
+                    {memberFinances.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Date</label>
+                  <input type="date" name="bazarDate" defaultValue={getFormattedDateStr(new Date())} required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Category</label>
+                  <input type="text" name="itemName" required placeholder="Rice & Veg..." className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Amount (৳)</label>
+                  <input type="number" name="amount" required min="1" placeholder="0" className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-[#0060E5] text-white font-semibold rounded-xl p-4 mt-2 hover:bg-[#052065] transition-colors shadow-sm">
+                Save Bazar Entry
+              </button>
+            </form>
+          ) : modalType === 'menu' ? (
+            <form onSubmit={handleMenuSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Date</label>
+                <input type="date" name="menuDate" defaultValue={selectedDateStr} required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Breakfast Menu</label>
+                  <input type="text" name="menuBreakfast" defaultValue={dailyMenus[selectedDateStr]?.breakfast === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.breakfast || "")} placeholder="e.g., Paratha, Egg & Dal Bhuna" className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Lunch Menu</label>
+                  <input type="text" name="menuLunch" defaultValue={dailyMenus[selectedDateStr]?.lunch === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.lunch || "")} placeholder="e.g., Beef Curry, Vorta & Rice" className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Dinner Menu</label>
+                  <input type="text" name="menuDinner" defaultValue={dailyMenus[selectedDateStr]?.dinner === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.dinner || "")} placeholder="e.g., Chicken Curry & Onion Fry" className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-[#0060E5] text-white font-semibold rounded-xl p-4 mt-2 hover:bg-[#052065] transition-colors shadow-sm">
+                Save Daily Menu
+              </button>
+            </form>
+          ) : modalType === 'meal' ? (
+            <form onSubmit={handleMealSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Member</label>
+                <select name="memberId" required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors">
+                  <option value="">Select a member...</option>
+                  {memberFinances.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Number of Meals</label>
+                <input type="number" name="mealCount" step="0.5" required min="0.5" placeholder="e.g. 1 or 0.5" className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+              </div>
+              <button type="submit" className="w-full bg-[#0060E5] text-white font-semibold rounded-xl p-4 mt-2 hover:bg-[#052065] transition-colors shadow-sm">
+                Save Meal Entry
+              </button>
+            </form>
+          ) : modalType === 'offDay' ? (
+            <form onSubmit={handleOffDaySubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Member</label>
+                <select name="memberId" defaultValue={selectedScheduleMember} required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors">
+                  {memberFinances.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Date</label>
+                <input type="date" name="offDate" required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Meal to skip</label>
+                <select name="mealType" required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors">
+                  <option value="all">Full Day (All Meals)</option>
+                  <option value="breakfast">Breakfast</option>
+                  <option value="lunch">Lunch</option>
+                  <option value="dinner">Dinner</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-[#0060E5] text-white font-semibold rounded-xl p-4 mt-2 hover:bg-[#052065] transition-colors shadow-sm">
+                Save Exception
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleHolidaySubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Reason</label>
+                <input type="text" name="holidayName" required placeholder="e.g., Eid Vacation" className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Date</label>
+                <input type="date" name="holidayDate" required className="w-full border border-gray-200 rounded-xl p-3.5 text-gray-800 bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+              </div>
+              <button type="submit" className="w-full bg-[#0060E5] text-white font-semibold rounded-xl p-4 mt-2 hover:bg-[#052065] transition-colors shadow-sm">
+                Save Holiday
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-0 sm:p-4 font-sans text-gray-800">
+      <div className="w-full max-w-[400px] h-[100dvh] sm:h-[800px] bg-[#FAFAFA] sm:rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col border border-gray-200">
+        
+        <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {activeTab === 'home' && <HomeTab />}
+          {activeTab === 'meals' && <MealsTab />}
+          {activeTab === 'expenses' && <ExpensesTab />}
+          {activeTab === 'profile' && <PlaceholderTab title="Settings" icon={User} />}
+        </div>
+
+        {activeTab === 'home' && (
+          <>
+            {isFabOpen && (
+              <div 
+                className="absolute inset-0 bg-gray-900/10 backdrop-blur-sm z-20 transition-opacity"
+                onClick={() => setIsFabOpen(false)}
+              ></div>
+            )}
+
+            <div className={`absolute bottom-[160px] right-6 flex flex-col gap-3 items-end z-30 transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+              <button 
+                onClick={() => { setModalType('bazar'); setIsFabOpen(false); }}
+                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-md border border-gray-100 text-[#052065] font-medium hover:bg-gray-50"
+              >
+                <span className="text-sm">Add Bazar</span>
+                <ShoppingCart size={18} className="text-[#0060E5]" />
+              </button>
+              <button 
+                onClick={() => { setModalType('menu'); setIsFabOpen(false); }}
+                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-md border border-gray-100 text-[#052065] font-medium hover:bg-gray-50"
+              >
+                <span className="text-sm">Set Menu</span>
+                <Coffee size={18} className="text-[#0060E5]" />
+              </button>
+              <button 
+                onClick={() => { setModalType('meal'); setIsFabOpen(false); }}
+                className="flex items-center gap-3 bg-white pr-4 pl-3 py-2.5 rounded-full shadow-md border border-gray-100 text-[#052065] font-medium hover:bg-gray-50"
+              >
+                <span className="text-sm">Add Meal</span>
+                <CheckCircle2 size={18} className="text-[#0060E5]" />
+              </button>
+            </div>
+
+            <button 
+              onClick={() => setIsFabOpen(!isFabOpen)}
+              className={`absolute bottom-24 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 active:scale-95 z-30 ${isFabOpen ? 'rotate-45 bg-white text-[#052065] border border-gray-200' : 'bg-[#0060E5] text-white hover:bg-[#052065]'}`}
+            >
+              <Plus size={24} strokeWidth={2} />
+            </button>
+          </>
+        )}
+
+        <div className="absolute bottom-0 w-full bg-white border-t border-gray-100 px-6 py-4 z-10 pb-6 sm:pb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+          <div className="flex justify-between items-center">
+            
+            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+              <Home size={22} strokeWidth={activeTab === 'home' ? 2 : 1.5} className={`transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Home</span>
+            </button>
+            
+            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+              <CalendarDays size={22} strokeWidth={activeTab === 'meals' ? 2 : 1.5} className={`transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Meals</span>
+            </button>
+            
+            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+              <Wallet size={22} strokeWidth={activeTab === 'expenses' ? 2 : 1.5} className={`transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Finance</span>
+            </button>
+            
+            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+              <User size={22} strokeWidth={activeTab === 'profile' ? 2 : 1.5} className={`transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+              <span className={`text-[10px] font-medium transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Profile</span>
+            </button>
+            
+          </div>
+        </div>
+
+        <EntryModal />
+        
+      </div>
+    </div>
+  );
+}
+        // --- YOUR CODE ENDS HERE ---
+
+        // Render the component to the DOM
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
