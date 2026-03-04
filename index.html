@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>কোলগেট স্মাইল কর্ণার - ফর্ম</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Noto Sans Bengali for better Bangla rendering -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Sans+Bengali:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            /* Red themed gradient for Colgate */
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(0, 72%, 90%, 1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(0, 80%, 95%, 1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(350, 80%, 90%, 1) 0, transparent 50%);
+            background-size: cover;
+            min-height: 100vh;
+        }
+        
+        /* Custom loading spinner animation */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #dc2626; /* Red spinner */
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .input-group:focus-within label {
+            color: #dc2626; /* Red focus label */
+        }
+        
+        .input-group:focus-within i {
+            color: #dc2626; /* Red focus icon */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- Form Container -->
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all hover:scale-[1.01] duration-300">
+        
+        <!-- Header -->
+        <div class="bg-red-600 p-8 text-center relative overflow-hidden">
+            <!-- Decorative background shape -->
+            <div class="absolute top-0 left-0 w-full h-full bg-red-700 opacity-20 transform -skew-y-6 origin-top-left"></div>
+            
+            <h2 class="text-2xl font-bold text-white relative z-10">কোলগেট স্মাইল কর্ণার</h2>
+            <p class="text-red-100 mt-2 relative z-10 text-sm">
+                এই ফর্মটি কোলগেট পালমোলিভ এর বিশেষ প্রোগ্রাম "কোলগেট স্মাইল কর্ণার" এর জন্য নির্ধারিত দোকান গুলোর ছবি সংগ্রহের জন্য তৈরী করা হয়েছে
+            </p>
+        </div>
+
+        <!-- Form Content -->
+        <div class="p-6 sm:p-8">
+            <form id="customForm" class="space-y-5">
+                
+                <!-- Field 1: Display Month -->
+                <div class="input-group relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 transition-colors">
+                        ডিসপ্লে মাস <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="calendar" class="h-5 w-5 text-gray-400 transition-colors"></i>
+                        </div>
+                        <select name="display_month" required
+                            class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:bg-white text-gray-900 sm:text-sm py-3 transition-all outline-none appearance-none">
+                            <option value="" disabled selected>ডিসপ্লের নির্ধারিত মাস সিলেক্ট করুন</option>
+                            <option value="February">February</option>
+                            <option value="March">March</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i data-lucide="chevron-down" class="h-4 w-4 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field: Area Name -->
+                <div class="input-group relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 transition-colors">
+                        এরিয়া নাম <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="map-pin" class="h-5 w-5 text-gray-400 transition-colors"></i>
+                        </div>
+                        <select name="area_name" id="areaSelect" required
+                            class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:bg-white text-gray-900 sm:text-sm py-3 transition-all outline-none appearance-none">
+                            <option value="" disabled selected>এরিয়া সিলেক্ট করুন</option>
+                            <option value="CTG">CTG</option>
+                            <option value="DHAKA">DHAKA</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i data-lucide="chevron-down" class="h-4 w-4 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field 2: Distribution Name -->
+                <div class="input-group relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 transition-colors">
+                        ডিস্ট্রিবিউশন নাম <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="truck" class="h-5 w-5 text-gray-400 transition-colors"></i>
+                        </div>
+                        <select name="distribution_name" id="distSelect" required
+                            class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:bg-white text-gray-900 sm:text-sm py-3 transition-all outline-none appearance-none">
+                            <option value="" disabled selected>প্রথমে এরিয়া সিলেক্ট করুন</option>
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i data-lucide="chevron-down" class="h-4 w-4 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field 3: Slab -->
+                <div class="input-group relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 transition-colors">
+                        স্ল্যাব <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="layers" class="h-5 w-5 text-gray-400 transition-colors"></i>
+                        </div>
+                        <select name="slab" required
+                            class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:bg-white text-gray-900 sm:text-sm py-3 transition-all outline-none appearance-none">
+                            <option value="" disabled selected>দোকানটি যে স্লাবটিতে সম্মতি প্রকাশ করেছে</option>
+                            <option value="Slab 1">Slab 1</option>
+                            <option value="Slab 2">Slab 2</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <i data-lucide="chevron-down" class="h-4 w-4 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field 4: Shop Code -->
+                <div class="input-group relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 transition-colors">
+                        দোকানের কোড <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="hash" class="h-5 w-5 text-gray-400 transition-colors"></i>
+                        </div>
+                        <input type="text" name="shop_code" required
+                            class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:bg-white text-gray-900 sm:text-sm py-3 transition-all outline-none uppercase" 
+                            placeholder="BDC0002362">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">উদাহরণ: BDC0002362</p>
+                </div>
+
+                <!-- Field 5: Shop Image Upload & Camera -->
+                <div class="input-group relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 transition-colors">
+                        ডিসপ্লের ছবি <span class="text-red-500">*</span>
+                    </label>
+                    
+                    <!-- Hidden Native Camera Input -->
+                    <input type="file" id="nativeCameraInput" accept="image/*" capture="environment" class="hidden">
+                    
+                    <!-- Hidden Manual File Input (New) -->
+                    <input type="file" id="manualFileInput" accept="image/*" class="hidden">
+
+                    <!-- Camera Trigger Button (Visible by default) -->
+                    <div id="cameraTriggerContainer">
+                        <button type="button" id="openCameraBtn" class="flex flex-row items-center justify-center w-full py-4 border-2 border-dashed border-red-300 rounded-lg bg-red-50 hover:bg-red-100 transition-colors group">
+                            <div class="p-2 rounded-full bg-white mr-3 shadow-sm group-hover:scale-110 transition-transform">
+                                <i data-lucide="camera" class="h-6 w-6 text-red-600"></i>
+                            </div>
+                            <span class="text-sm font-bold text-red-700">ক্যামেরা দিয়ে ছবি তুলুন</span>
+                        </button>
+                        
+                        <!-- Manual Upload Button (New) -->
+                        <div class="mt-3 text-center">
+                            <button type="button" id="manualUploadBtn" class="text-xs text-gray-500 hover:text-red-600 underline flex items-center justify-center mx-auto transition-colors">
+                                <i data-lucide="upload" class="h-3 w-3 mr-1"></i>
+                                অথবা গ্যালারি থেকে আপলোড করুন
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Captured Preview Container (Hidden by default) -->
+                    <div id="previewContainer" class="hidden mt-2 relative">
+                        <div class="relative rounded-lg overflow-hidden border border-gray-300">
+                            <img id="capturedImagePreview" class="w-full h-auto block">
+                            <button type="button" id="retakeBtn" class="absolute top-2 right-2 bg-gray-900 bg-opacity-70 text-white rounded-full p-2 hover:bg-opacity-90 transition-all">
+                                <i data-lucide="x" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-green-600 mt-1 flex items-center">
+                            <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i> ছবি যোগ করা হয়েছে
+                        </p>
+                    </div>
+                    
+                    <!-- Hidden Canvas for processing -->
+                    <canvas id="processCanvas" class="hidden"></canvas>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 transform hover:-translate-y-0.5">
+                    <span id="btnText">জমা দিন (Submit)</span>
+                    <div id="btnLoader" class="loader hidden"></div>
+                </button>
+
+            </form>
+
+            <!-- Success Message (Hidden by default) -->
+            <div id="successMessage" class="hidden text-center py-4 animate-fade-in">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                    <i data-lucide="check" class="h-6 w-6 text-green-600"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">সফলভাবে জমা দেওয়া হয়েছে!</h3>
+                <p class="text-sm text-gray-500 mt-2">আমরা আপনার তথ্য পেয়েছি।</p>
+                <button onclick="resetForm()" class="mt-4 text-red-600 hover:text-red-800 text-sm font-medium">আরেকটি ফর্ম পূরণ করুন</button>
+            </div>
+            
+            <!-- Error Message (Hidden by default) -->
+             <div id="errorMessage" class="hidden text-center py-4 text-red-600 text-sm">
+                কিছু ভুল হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।
+            </div>
+
+        </div>
+        
+        <!-- Footer -->
+        <div class="bg-gray-50 px-8 py-4 border-t border-gray-100">
+            <p class="text-xs text-center text-gray-400">কোলগেট স্মাইল কর্ণার প্রোগ্রাম &copy; ২০২৫</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        const form = document.getElementById('customForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Camera & File Elements
+        const openCameraBtn = document.getElementById('openCameraBtn');
+        const nativeCameraInput = document.getElementById('nativeCameraInput');
+        const manualUploadBtn = document.getElementById('manualUploadBtn');
+        const manualFileInput = document.getElementById('manualFileInput');
+        
+        const retakeBtn = document.getElementById('retakeBtn');
+        const cameraTriggerContainer = document.getElementById('cameraTriggerContainer');
+        const previewContainer = document.getElementById('previewContainer');
+        const capturedImagePreview = document.getElementById('capturedImagePreview');
+        const processCanvas = document.getElementById('processCanvas');
+
+        let capturedImageData = null; // Stores the Base64 of captured image
+
+        // Data for Area to Distribution mapping
+        const distributionData = {
+            "CTG": [
+                "Next Associates",
+                "ARC Trading",
+                "M/S Farid Enterprise",
+                "P M Traders",
+                "Madina Traders"
+            ],
+            "DHAKA": [
+                "Takwa Enterprise",
+                "Unitrust Trading Co.",
+                "Paragon Marketing Limited",
+                "Self Tech Marketing Ltd",
+                "M/S Sanuar Enterprise",
+                "M/S Hasan Brothers Corporation",
+                "M/S Hasan Brothers Corporation 2"
+            ]
+        };
+
+        const areaSelect = document.getElementById('areaSelect');
+        const distSelect = document.getElementById('distSelect');
+
+        // Event Listener for Area Change
+        areaSelect.addEventListener('change', function() {
+            const selectedArea = this.value;
+            const distributors = distributionData[selectedArea] || [];
+            
+            distSelect.innerHTML = '<option value="" disabled selected>দোকানটি যে ডিস্ট্রিবিউশন এর অধীনে তা সিলেক্ট করুন</option>';
+            
+            distributors.forEach(dist => {
+                const option = document.createElement('option');
+                option.value = dist;
+                option.textContent = dist;
+                distSelect.appendChild(option);
+            });
+        });
+
+        // --- CAMERA & FILE FUNCTIONS ---
+
+        // 1. Open Native Camera
+        openCameraBtn.addEventListener('click', () => {
+            nativeCameraInput.click();
+        });
+        
+        // 2. Open Manual File Upload
+        manualUploadBtn.addEventListener('click', () => {
+            manualFileInput.click();
+        });
+
+        // 3. Process Image (Common Logic for both inputs)
+        const handleFileSelect = (e) => {
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(file);
+                
+                img.onload = () => {
+                    const ctx = processCanvas.getContext('2d');
+                    
+                    // Set canvas dimensions to match the image
+                    processCanvas.width = img.width;
+                    processCanvas.height = img.height;
+                    
+                    // Draw original image
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // --- CUSTOM TIMESTAMP DESIGN ---
+                    // ONLY APPLY TIMESTAMP IF INPUT IS NOT MANUAL UPLOAD
+                    if (e.target.id !== 'manualFileInput') {
+                        applyTimestamp(ctx, processCanvas.width, processCanvas.height);
+                    }
+                    // -----------------------------
+                    
+                    // Export to Base64
+                    capturedImageData = processCanvas.toDataURL('image/jpeg', 0.8); // Compress slightly
+                    
+                    // Show Preview
+                    capturedImagePreview.src = capturedImageData;
+                    cameraTriggerContainer.classList.add('hidden');
+                    previewContainer.classList.remove('hidden');
+                    
+                    // Cleanup
+                    URL.revokeObjectURL(objectUrl);
+                };
+                
+                img.src = objectUrl;
+            }
+        };
+
+        // Attach Process Function to both inputs
+        nativeCameraInput.addEventListener('change', handleFileSelect);
+        manualFileInput.addEventListener('change', handleFileSelect);
+
+        // Timestamp Logic
+        function applyTimestamp(ctx, w, h) {
+            const now = new Date();
+            
+            // Date Format: 29-Jan-2026
+            const day = now.getDate();
+            const month = now.toLocaleString('en-US', { month: 'short' });
+            const year = now.getFullYear();
+            const dateStr = `${day}-${month}-${year}`;
+
+            // Time Format: 11:30 AM
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); 
+            
+            const titleStr = "Colgate Smile Corner";
+            
+            const padding = w * 0.015; 
+            
+            // Font Sizes
+            const dateFontSize = w * 0.025;
+            const timeFontSize = w * 0.025;
+            const titleFontSize = w * 0.028;
+            
+            const font = "sans-serif";
+            const lineHeight = 1.3;
+            const totalTextHeight = (dateFontSize + timeFontSize + titleFontSize) * lineHeight;
+            
+            // Box Position (Bottom Left with margin)
+            const margin = w * 0.02;
+            const startX = margin + padding;
+            let currentY = h - totalTextHeight - margin;
+            
+            // Set Stroke (Outline)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = w * 0.004; 
+            ctx.lineJoin = 'round';
+            ctx.textBaseline = 'top';
+
+            // 1. Date
+            ctx.font = `bold ${dateFontSize}px ${font}`;
+            ctx.strokeText(dateStr, startX, currentY);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(dateStr, startX, currentY);
+            currentY += dateFontSize * lineHeight;
+
+            // 2. Time
+            ctx.font = `bold ${timeFontSize}px ${font}`;
+            ctx.strokeText(timeStr, startX, currentY);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(timeStr, startX, currentY);
+            currentY += timeFontSize * lineHeight;
+            
+            // 3. Title
+            ctx.font = `bold ${titleFontSize}px ${font}`;
+            ctx.strokeStyle = 'white'; 
+            ctx.lineWidth = w * 0.006; 
+            ctx.strokeText(titleStr, startX, currentY);
+            
+            ctx.fillStyle = '#dc2626'; // Colgate Red
+            ctx.fillText(titleStr, startX, currentY);
+        }
+
+        // Retake Photo
+        retakeBtn.addEventListener('click', () => {
+            capturedImageData = null;
+            nativeCameraInput.value = ''; // Reset input
+            manualFileInput.value = '';   // Reset manual input
+            previewContainer.classList.add('hidden');
+            cameraTriggerContainer.classList.remove('hidden');
+        });
+
+        // IMPORTANT: The URL you provided
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx9WuBOgKRgfol24Def7xKGwUHu6zfJPhdpuwqlE58yWgraHM7uXKpJlCmwa4HCKqNW/exec';
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            
+            // Validation: Check if image is captured
+            if (!capturedImageData) {
+                alert("অনুগ্রহ করে ক্যামেরা দিয়ে ছবি তুলুন অথবা আপলোড করুন।");
+                return;
+            }
+
+            // UI Loading State
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            // Collect Data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Handle Image Data
+            try {
+                // Use captured image
+                data.shop_image = {
+                    name: `capture_${Date.now()}.jpg`,
+                    type: 'image/jpeg',
+                    data: capturedImageData
+                };
+            } catch (error) {
+                console.error("Error processing image:", error);
+                showError();
+                return;
+            }
+
+            // --- REAL SUBMISSION MODE ---
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                mode: 'no-cors' 
+            })
+            .then(() => {
+                showSuccess();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError();
+            });
+        });
+
+        function showSuccess() {
+            form.classList.add('hidden');
+            successMessage.classList.remove('hidden');
+            btnLoader.classList.add('hidden');
+            btnText.classList.remove('hidden');
+        }
+
+        function showError() {
+            errorMessage.classList.remove('hidden');
+            btnLoader.classList.add('hidden');
+            btnText.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+
+        function resetForm() {
+            form.reset();
+            successMessage.classList.add('hidden');
+            form.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            errorMessage.classList.add('hidden');
+            
+            // Reset dropdowns
+            distSelect.innerHTML = '<option value="" disabled selected>প্রথমে এরিয়া সিলেক্ট করুন</option>';
+            
+            // Reset Camera UI
+            capturedImageData = null;
+            nativeCameraInput.value = '';
+            manualFileInput.value = '';
+            previewContainer.classList.add('hidden');
+            cameraTriggerContainer.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
+
