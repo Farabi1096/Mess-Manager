@@ -396,7 +396,65 @@ export default function App() {
     }));
   };
 
-  // --- Functions rendering Views (called explicitly to avoid React remount bugs) ---
+  // --- Components ---
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-800">
+        <div className="mx-auto w-full h-[100dvh] md:h-[800px] md:max-w-[400px] md:my-4 bg-[#FAFAFA] md:rounded-[2.5rem] md:shadow-2xl relative overflow-hidden flex flex-col justify-center px-8 md:border md:border-gray-200 transition-all">
+          
+          {/* Ambient Top Glow Blobs */}
+          <div className="absolute top-0 inset-x-0 h-64 pointer-events-none overflow-hidden z-0">
+            <div className="absolute -top-10 -left-20 w-64 h-64 bg-[#0060E5]/10 rounded-full blur-[60px]"></div>
+            <div className="absolute top-10 -right-16 w-56 h-56 bg-[#FC0075]/10 rounded-full blur-[50px]"></div>
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center mb-10 text-center">
+            <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-6">
+              <Utensils size={32} className="text-[#0060E5]" strokeWidth={2.5} />
+            </div>
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#052065] to-[#0060E5] tracking-tight mb-2">
+              Hungry Bachelors
+            </h1>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Mess Management App</p>
+          </div>
+
+          <form onSubmit={handleLoginSubmit} className="relative z-10 flex flex-col gap-5">
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block px-1">Username</label>
+              <input 
+                type="text" 
+                name="username" 
+                defaultValue="admin" 
+                required 
+                className="w-full border border-white shadow-sm rounded-2xl p-4 text-sm font-bold text-[#052065] bg-white/80 backdrop-blur-md focus:outline-none focus:border-[#0060E5] transition-colors" 
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block px-1">Password</label>
+              <input 
+                type="password" 
+                name="password" 
+                defaultValue="1234" 
+                required 
+                className="w-full border border-white shadow-sm rounded-2xl p-4 text-sm font-bold text-[#052065] bg-white/80 backdrop-blur-md focus:outline-none focus:border-[#0060E5] transition-colors" 
+              />
+            </div>
+            
+            {loginError && (
+              <p className="text-[#F33131] text-[10px] font-bold uppercase tracking-wider text-center mt-2 bg-red-50 p-2 rounded-lg border border-red-100">
+                {loginError}
+              </p>
+            )}
+
+            <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-2xl py-4 mt-4 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">
+              Sign In
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   const renderHomeTab = () => {
     const currentMenu = dailyMenus[selectedDateStr] || {
@@ -1251,23 +1309,23 @@ export default function App() {
 
         {/* Floating Bottom Nav - Centered perfectly using flex fixed height */}
         <div className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 h-[72px] z-[60] shadow-[0_-8px_40px_rgba(0,0,0,0.05)]">
-          <div className="flex justify-between items-center h-full px-6 max-w-sm mx-auto">
-            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
+          <div className="flex items-center h-full w-full">
+            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 flex-1 h-full group">
               <Home size={22} strokeWidth={activeTab === 'home' ? 2 : 1.5} className={`transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Home</span>
             </button>
             
-            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
+            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 flex-1 h-full group">
               <CalendarDays size={22} strokeWidth={activeTab === 'meals' ? 2 : 1.5} className={`transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Meals</span>
             </button>
             
-            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
+            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 flex-1 h-full group">
               <Wallet size={22} strokeWidth={activeTab === 'expenses' ? 2 : 1.5} className={`transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Finance</span>
             </button>
             
-            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
+            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 flex-1 h-full group">
               <User size={22} strokeWidth={activeTab === 'profile' ? 2 : 1.5} className={`transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Profile</span>
             </button>
@@ -1288,6 +1346,7 @@ export default function App() {
     </script>
 </body>
 </html>
+
 
 
 
