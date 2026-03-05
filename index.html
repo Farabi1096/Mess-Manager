@@ -67,10 +67,15 @@ import {
   Calendar,
   Banknote,
   Edit3,
-  UserPlus
+  UserPlus,
+  LogOut
 } from 'lucide-react';
 
 export default function App() {
+  // --- AUTHENTICATION STATE ---
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
   const [activeTab, setActiveTab] = useState('home');
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -159,6 +164,22 @@ export default function App() {
     const newDate = new Date(selectedDateObj);
     newDate.setDate(newDate.getDate() + days);
     setSelectedDateObj(newDate);
+  };
+
+  // --- LOGIN HANDLER ---
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const username = fd.get('username');
+    const password = fd.get('password');
+
+    // Simple mock authentication
+    if (username === 'admin' && password === '1234') {
+      setIsLoggedIn(true);
+      setLoginError('');
+    } else {
+      setLoginError('Invalid username or password. (Hint: admin / 1234)');
+    }
   };
 
   // --- SUBMIT HANDLERS ---
@@ -323,7 +344,6 @@ export default function App() {
   };
 
   const handleDeleteMember = (memberId) => {
-    // Remove member from finances, schedules, and clear their exceptions
     setMemberFinances(prev => prev.filter(m => m.id !== memberId));
     setMemberSchedules(prev => prev.filter(s => s.memberId !== memberId));
     setMealExceptions(prev => prev.filter(e => e.memberId !== memberId));
@@ -376,9 +396,9 @@ export default function App() {
     }));
   };
 
-  // --- Components ---
+  // --- Functions rendering Views (called explicitly to avoid React remount bugs) ---
 
-  const HomeTab = () => {
+  const renderHomeTab = () => {
     const currentMenu = dailyMenus[selectedDateStr] || {
       breakfast: "Standard Menu",
       lunch: "Standard Menu",
@@ -386,7 +406,7 @@ export default function App() {
     };
 
     return (
-      <div className="flex flex-col gap-6 pb-36 pt-12 md:pt-10 px-4 md:px-6 relative z-10">
+      <div className="flex flex-col gap-6 pb-[100px] pt-10 px-4 sm:px-6 relative z-10">
         <div className="flex justify-between items-center px-1">
           <div>
             <p className="text-[#0060E5] text-[10px] tracking-widest uppercase font-extrabold mb-0.5 flex items-center gap-1.5">
@@ -562,11 +582,14 @@ export default function App() {
     );
   };
 
-  const ExpensesTab = () => {
+  const renderExpensesTab = () => {
     let displayFinances = memberFinances;
-    // Mock historical data logic
+    if (selectedFinanceMonth !== '2026-03' && historicalFinances[selectedFinanceMonth]) {
+      displayFinances = historicalFinances[selectedFinanceMonth];
+    }
+
     return (
-      <div className="flex flex-col gap-6 pb-36 pt-12 md:pt-10 px-4 md:px-6 relative z-10">
+      <div className="flex flex-col gap-6 pb-[100px] pt-10 px-4 sm:px-6 relative z-10">
         <div className="flex justify-between items-end border-b border-gray-100 pb-4 px-1">
           <div>
             <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Finances</h2>
@@ -592,7 +615,7 @@ export default function App() {
           {displayFinances.map(member => {
             const computedMealCost = selectedFinanceMonth === '2026-03' 
               ? (member.totalMeals * currentMealRate) 
-              : 0; 
+              : member.mealCost || 0; 
 
             const effectiveBazar = member.bazarAmount + (member.settlementAdjustment || 0);
             const balance = effectiveBazar - computedMealCost;
@@ -679,7 +702,7 @@ export default function App() {
     );
   };
 
-  const MealsTab = () => { 
+  const renderMealsTab = () => { 
     const currentSchedule = memberSchedules.find(s => s.memberId === selectedScheduleMember) || memberSchedules[0];
 
     const cycleSchedule = (day, mealType) => {
@@ -706,7 +729,7 @@ export default function App() {
     };
 
     return (
-      <div className="flex flex-col gap-6 pb-36 pt-12 md:pt-10 px-4 md:px-6 relative z-10">
+      <div className="flex flex-col gap-6 pb-[100px] pt-10 px-4 sm:px-6 relative z-10">
         <div className="border-b border-gray-100 pb-4 px-1">
           <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Schedules</h2>
           <p className="text-xs text-gray-500 font-medium">Default weekly meal counts</p>
@@ -857,8 +880,8 @@ export default function App() {
     );
   };
 
-  const ProfileTab = () => (
-    <div className="flex flex-col gap-6 pb-36 pt-12 md:pt-10 px-4 md:px-6 relative z-10">
+  const renderProfileTab = () => (
+    <div className="flex flex-col gap-6 pb-[100px] pt-10 px-4 sm:px-6 relative z-10">
       <div className="border-b border-gray-100 pb-4 px-1 flex justify-between items-end">
         <div>
           <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Members</h2>
@@ -895,15 +918,22 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      <button 
+        onClick={() => setIsLoggedIn(false)}
+        className="mt-4 mx-1 flex items-center justify-center gap-2 bg-red-50 text-[#F33131] py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors hover:bg-red-100 active:scale-[0.98]"
+      >
+        <LogOut size={16} strokeWidth={2.5} /> Log Out
+      </button>
     </div>
   );
 
-  const EntryModal = () => {
+  const renderEntryModal = () => {
     if (!modalType) return null;
 
     return (
-      <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center transition-opacity">
-        <div className="bg-white w-full max-h-[90%] overflow-y-auto md:w-[90%] rounded-t-[2rem] md:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center transition-opacity">
+        <div className="bg-white w-full max-h-[90%] overflow-y-auto sm:w-[90%] rounded-t-[2rem] sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
             <h2 className="text-lg font-bold text-[#052065] tracking-tight uppercase tracking-widest text-sm">
               {modalType === 'bazar' ? 'Add Bazar Exp' : 
@@ -947,7 +977,7 @@ export default function App() {
                   <input type="number" name="amount" required min="1" placeholder="0" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Save Expense</button>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Save Expense</button>
             </form>
           )}
 
@@ -983,13 +1013,13 @@ export default function App() {
                 <button 
                   type="button" 
                   onClick={() => handleDeleteBazar(editingExpense.id)}
-                  className="flex-1 bg-red-50 text-[#F33131] text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 hover:bg-red-100 transition-colors shadow-sm active:scale-[0.98]"
+                  className="flex-1 bg-red-50 text-[#F33131] text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 hover:bg-red-100 transition-colors shadow-sm active:scale-[0.98]"
                 >
                   Delete
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-[2] bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]"
+                  className="flex-[2] bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]"
                 >
                   Save Changes
                 </button>
@@ -1011,7 +1041,7 @@ export default function App() {
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Cash Amount (৳)</label>
                 <input type="number" name="amount" required min="1" placeholder="e.g. 2000" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
               </div>
-              <button type="submit" className="w-full bg-[#00B991] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#008848] transition-colors shadow-lg shadow-[#00B991]/20 active:scale-[0.98]">Save Deposit</button>
+              <button type="submit" className="w-full bg-[#00B991] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#008848] transition-colors shadow-lg shadow-[#00B991]/20 active:scale-[0.98]">Save Deposit</button>
             </form>
           )}
 
@@ -1029,7 +1059,7 @@ export default function App() {
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">No. of Extra Meals</label>
                 <input type="number" name="mealCount" step="0.5" required min="0.5" placeholder="e.g. 1" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
               </div>
-              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Add Extra Meal</button>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Add Extra Meal</button>
             </form>
           )}
 
@@ -1054,7 +1084,7 @@ export default function App() {
                   <input type="text" name="menuDinner" defaultValue={dailyMenus[selectedDateStr]?.dinner === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.dinner || "")} placeholder="Dinner Menu..." className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Update Menus</button>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Update Menus</button>
             </form>
           )}
 
@@ -1065,7 +1095,7 @@ export default function App() {
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Full Name</label>
                 <input type="text" name="name" required placeholder="e.g. Asif Mahmud" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
               </div>
-              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Create Member</button>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Create Member</button>
             </form>
           )}
 
@@ -1091,13 +1121,13 @@ export default function App() {
                 <button 
                   type="button" 
                   onClick={() => handleDeleteMember(editingMember.id)}
-                  className="flex-1 bg-red-50 text-[#F33131] text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 hover:bg-red-100 transition-colors shadow-sm active:scale-[0.98]"
+                  className="flex-1 bg-red-50 text-[#F33131] text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 hover:bg-red-100 transition-colors shadow-sm active:scale-[0.98]"
                 >
                   Delete
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-[2] bg-[#052065] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 hover:bg-[#000] transition-colors shadow-lg active:scale-[0.98]"
+                  className="flex-[2] bg-[#052065] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 hover:bg-[#000] transition-colors shadow-lg active:scale-[0.98]"
                 >
                   Save Overrides
                 </button>
@@ -1127,7 +1157,7 @@ export default function App() {
                   <option value="dinner">Dinner Off</option>
                 </select>
               </div>
-              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Add Exception</button>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Add Exception</button>
             </form>
           )}
 
@@ -1141,7 +1171,7 @@ export default function App() {
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Holiday Date</label>
                 <input type="date" name="holidayDate" required className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
               </div>
-              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-3.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Save Holiday</button>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Save Holiday</button>
             </form>
           )}
         </div>
@@ -1151,7 +1181,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-800">
-      <div className="mx-auto w-full h-[100dvh] md:h-[800px] md:max-w-[400px] md:my-4 bg-[#FAFAFA] md:rounded-[2.5rem] md:shadow-2xl relative overflow-hidden flex flex-col md:border md:border-gray-200 transition-all">
+      <div className="w-full max-w-full sm:max-w-[400px] mx-auto h-[100dvh] sm:h-[800px] sm:my-4 bg-[#FAFAFA] sm:rounded-[2.5rem] sm:shadow-2xl relative overflow-hidden flex flex-col sm:border sm:border-gray-200 transition-all">
         
         {/* Ambient Top Glow Blobs */}
         <div className="absolute top-0 inset-x-0 h-48 pointer-events-none overflow-hidden z-0">
@@ -1161,12 +1191,13 @@ export default function App() {
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {activeTab === 'home' && <HomeTab />}
-          {activeTab === 'meals' && <MealsTab />}
-          {activeTab === 'expenses' && <ExpensesTab />}
-          {activeTab === 'profile' && <ProfileTab />}
+          {activeTab === 'home' && renderHomeTab()}
+          {activeTab === 'meals' && renderMealsTab()}
+          {activeTab === 'expenses' && renderExpensesTab()}
+          {activeTab === 'profile' && renderProfileTab()}
         </div>
 
+        {/* Floating Action Button */}
         {activeTab === 'home' && (
           <>
             {isFabOpen && (
@@ -1176,9 +1207,7 @@ export default function App() {
               ></div>
             )}
 
-            <div className="absolute bottom-[100px] right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
-              
-              {/* Stacked Menu Options (Prevents overlap natively) */}
+            <div className="absolute bottom-[90px] right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
               <div className={`flex flex-col items-end gap-3 transition-all duration-300 origin-bottom ${isFabOpen ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none'}`}>
                 <button 
                   onClick={() => { setModalType('bazar'); setIsFabOpen(false); }}
@@ -1210,44 +1239,42 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Main FAB */}
               <button 
                 onClick={() => setIsFabOpen(!isFabOpen)}
                 className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 active:scale-90 pointer-events-auto ${isFabOpen ? 'rotate-45 bg-white text-[#052065] shadow-lg border border-gray-100' : 'bg-[#0060E5] text-white shadow-[#0060E5]/40'}`}
               >
                 <Plus size={28} strokeWidth={3} />
               </button>
-
             </div>
           </>
         )}
 
-        {/* Floating Bottom Nav */}
-        <div className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 pt-3 pb-6 md:pb-4 z-[60] shadow-[0_-8px_40px_rgba(0,0,0,0.05)]">
-          <div className="flex justify-between items-center max-w-sm mx-auto">
-            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+        {/* Floating Bottom Nav - Centered perfectly using flex fixed height */}
+        <div className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 h-[72px] z-[60] shadow-[0_-8px_40px_rgba(0,0,0,0.05)]">
+          <div className="flex justify-between items-center h-full px-6 max-w-sm mx-auto">
+            <button onClick={() => { setActiveTab('home'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
               <Home size={22} strokeWidth={activeTab === 'home' ? 2 : 1.5} className={`transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Home</span>
+              <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'home' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Home</span>
             </button>
             
-            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+            <button onClick={() => { setActiveTab('meals'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
               <CalendarDays size={22} strokeWidth={activeTab === 'meals' ? 2 : 1.5} className={`transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Meals</span>
+              <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'meals' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Meals</span>
             </button>
             
-            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+            <button onClick={() => { setActiveTab('expenses'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
               <Wallet size={22} strokeWidth={activeTab === 'expenses' ? 2 : 1.5} className={`transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Finance</span>
+              <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'expenses' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Finance</span>
             </button>
             
-            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center gap-1 w-16 group">
+            <button onClick={() => { setActiveTab('profile'); setIsFabOpen(false); }} className="flex flex-col items-center justify-center gap-1 w-16 h-full group">
               <User size={22} strokeWidth={activeTab === 'profile' ? 2 : 1.5} className={`transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Profile</span>
+              <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'profile' ? 'text-[#0060E5]' : 'text-gray-400'}`}>Profile</span>
             </button>
           </div>
         </div>
 
-        <EntryModal />
+        {renderEntryModal()}
       </div>
     </div>
   );
@@ -1261,6 +1288,7 @@ export default function App() {
     </script>
 </body>
 </html>
+
 
 
 
