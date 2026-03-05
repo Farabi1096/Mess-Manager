@@ -68,7 +68,8 @@ import {
   Banknote,
   Edit3,
   UserPlus,
-  LogOut
+  LogOut,
+  Camera
 } from 'lucide-react';
 
 export default function App() {
@@ -78,22 +79,32 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('home');
   const [isFabOpen, setIsFabOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [modalType, setModalType] = useState(null);
   const [editingMember, setEditingMember] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [isSnapping, setIsSnapping] = useState(false);
   
+  // 1. Core Source of Truth for Expenses
   const [expenses, setExpenses] = useState([
     { id: 1, name: 'Rice & Oil', amount: 1250, date: 'Mar 04', rawDate: '2026-03-04', memberName: 'Rakib Hasan', memberId: 1 },
     { id: 2, name: 'Vegetables & Fish', amount: 840, date: 'Mar 03', rawDate: '2026-03-03', memberName: 'Sajid Ahmed', memberId: 2 },
     { id: 3, name: 'Chicken & Spices', amount: 1500, date: 'Mar 01', rawDate: '2026-03-01', memberName: 'Tarikul Islam', memberId: 3 },
-    { id: 4, name: 'Monthly Groceries', amount: 5740, date: 'Feb 28', rawDate: '2026-02-28', memberName: 'Manager (Rakib)', memberId: 1 },
+    { id: 4, name: 'Monthly Groceries', amount: 5740, date: 'Feb 28', rawDate: '2026-02-28', memberName: 'Rakib Hasan', memberId: 1 },
   ]);
 
+  // 2. Core Source of Truth for Cash Deposits
+  const [deposits, setDeposits] = useState([
+    { id: 1, memberId: 2, amount: 660, date: 'Mar 01', rawDate: '2026-03-01' }, 
+    { id: 2, memberId: 3, amount: 700, date: 'Mar 01', rawDate: '2026-03-01' }, 
+  ]);
+
+  // 3. Member Info (Balances are now calculated dynamically below)
   const [memberFinances, setMemberFinances] = useState([
-    { id: 1, name: 'Rakib Hasan', bazarAmount: 3500, totalMeals: 47.5 }, 
-    { id: 2, name: 'Sajid Ahmed', bazarAmount: 1500, totalMeals: 41.5 }, 
-    { id: 3, name: 'Tarikul Islam', bazarAmount: 2200, totalMeals: 37.5 }, 
-    { id: 4, name: 'Mehedi Hasan', bazarAmount: 0, totalMeals: 33 },   
+    { id: 1, name: 'Rakib Hasan', totalMeals: 47.5, manualCreditAdjustment: 0 }, 
+    { id: 2, name: 'Sajid Ahmed', totalMeals: 41.5, manualCreditAdjustment: 0 }, 
+    { id: 3, name: 'Tarikul Islam', totalMeals: 37.5, manualCreditAdjustment: 0 }, 
+    { id: 4, name: 'Mehedi Hasan', totalMeals: 33, manualCreditAdjustment: 0 },   
   ]);
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -113,16 +124,28 @@ export default function App() {
   ]);
 
   const [mealExceptions, setMealExceptions] = useState([]);
-  const [selectedFinanceMonth, setSelectedFinanceMonth] = useState('2026-03');
   
-  // New state to toggle showing all expenses
+  const [bazarSchedules, setBazarSchedules] = useState([
+    { id: 1, memberId: 1, startDate: '2026-03-01', endDate: '2026-03-05' },
+    { id: 2, memberId: 2, startDate: '2026-03-06', endDate: '2026-03-10' }
+  ]);
+
+  const [selectedFinanceMonth, setSelectedFinanceMonth] = useState('2026-03');
   const [showAllExpenses, setShowAllExpenses] = useState(false);
   
-  // --- DYNAMIC CALCULATIONS ---
+  // --- DYNAMIC CALCULATIONS ENGINE ---
   const totalMessExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const totalMessMeals = memberFinances.reduce((sum, m) => sum + (m.totalMeals || 0), 0);
   const currentMealRate = totalMessMeals > 0 ? (totalMessExpenses / totalMessMeals) : 0;
   
+  const getMemberCredit = (memberId) => {
+    const expSum = expenses.filter(e => e.memberId === memberId).reduce((s, e) => s + e.amount, 0);
+    const depSum = deposits.filter(d => d.memberId === memberId).reduce((s, d) => s + d.amount, 0);
+    const member = memberFinances.find(m => m.id === memberId);
+    const adjSum = member?.manualCreditAdjustment || 0;
+    return expSum + depSum + adjSum;
+  };
+
   const LOGGED_IN_USER_ID = 1; 
   const loggedInMember = memberFinances.find(m => m.id === LOGGED_IN_USER_ID);
   const loggedInTotalCost = loggedInMember ? (loggedInMember.totalMeals * currentMealRate) : 0;
@@ -140,25 +163,49 @@ export default function App() {
   const selectedDayName = daysOfWeek[selectedDateObj.getDay()];
   const isToday = selectedDateStr === getFormattedDateStr(new Date());
 
-  const [dailyMenus, setDailyMenus] = useState({
-    [getFormattedDateStr(new Date())]: {
-      breakfast: "Paratha, Egg & Dal Bhuna",
-      lunch: "Beef Curry, Vorta & Rice",
-      dinner: "Chicken Curry & Onion Fry"
-    }
-  });
+  // --- NOTIFICATION ENGINE ---
+  const todayActualStr = getFormattedDateStr(new Date());
+  const sortedBazarSchedules = [...bazarSchedules].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+  const currentBazar = sortedBazarSchedules.find(s => s.startDate <= todayActualStr && s.endDate >= todayActualStr);
+  const nextBazar = sortedBazarSchedules.find(s => s.startDate > todayActualStr);
+
+  let notificationTitle = "No Updates";
+  let notificationMsg = "No bazar scheduled at the moment.";
+  let hasActiveNotification = false;
+
+  if (currentBazar) {
+    const m = memberFinances.find(m => m.id === currentBazar.memberId);
+    notificationTitle = "Active Bazar Duty";
+    notificationMsg = `${m ? m.name : 'Someone'} is assigned for bazar until ${new Date(currentBazar.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`;
+    hasActiveNotification = true;
+  } else if (nextBazar) {
+    const m = memberFinances.find(m => m.id === nextBazar.memberId);
+    notificationTitle = "Upcoming Bazar";
+    notificationMsg = `${m ? m.name : 'Someone'} is scheduled starting ${new Date(nextBazar.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`;
+    hasActiveNotification = true;
+  }
+
+  // Changed to empty object so it naturally relies on our new default strings
+  const [dailyMenus, setDailyMenus] = useState({});
 
   const activeHoliday = holidays.find(h => h.date === selectedDateStr);
   const isSelectedHoliday = !!activeHoliday;
   
-  const baseSchedule = memberSchedules.find(m => m.memberId === LOGGED_IN_USER_ID)?.schedule[selectedDayName] || { breakfast: 0, lunch: 0, dinner: 0 };
-  const selectedException = mealExceptions.find(e => e.memberId === LOGGED_IN_USER_ID && e.date === selectedDateStr);
+  // Dynamically calculate total meals for the entire mess for the selected date
+  let totalBreakfast = 0;
+  let totalLunch = 0;
+  let totalDinner = 0;
 
-  const displayedMeals = {
-    breakfast: isSelectedHoliday ? 0 : (selectedException?.breakfast !== undefined ? selectedException.breakfast : baseSchedule.breakfast),
-    lunch: isSelectedHoliday ? 0 : (selectedException?.lunch !== undefined ? selectedException.lunch : baseSchedule.lunch),
-    dinner: isSelectedHoliday ? 0 : (selectedException?.dinner !== undefined ? selectedException.dinner : baseSchedule.dinner),
-  };
+  if (!isSelectedHoliday) {
+    memberFinances.forEach(member => {
+      const schedule = memberSchedules.find(s => s.memberId === member.id)?.schedule[selectedDayName] || { breakfast: 0, lunch: 0, dinner: 0 };
+      const exception = mealExceptions.find(e => e.memberId === member.id && e.date === selectedDateStr);
+
+      totalBreakfast += exception?.breakfast !== undefined ? exception.breakfast : schedule.breakfast;
+      totalLunch += exception?.lunch !== undefined ? exception.lunch : schedule.lunch;
+      totalDinner += exception?.dinner !== undefined ? exception.dinner : schedule.dinner;
+    });
+  }
 
   const changeDate = (days) => {
     const newDate = new Date(selectedDateObj);
@@ -173,7 +220,6 @@ export default function App() {
     const username = fd.get('username');
     const password = fd.get('password');
 
-    // Simple mock authentication
     if (username === 'admin' && password === '1234') {
       setIsLoggedIn(true);
       setLoginError('');
@@ -182,16 +228,102 @@ export default function App() {
     }
   };
 
+  // --- SNAP & SHARE HANDLERS ---
+  const triggerDownload = (dataUrl) => {
+    const link = document.createElement('a');
+    link.download = `mess-finance-${selectedFinanceMonth}.png`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSnap = async () => {
+    setIsSnapping(true);
+    try {
+      if (!window.html2canvas) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      const element = document.getElementById('finance-summary-container');
+      if (!element) return;
+
+      const canvas = await window.html2canvas(element, {
+        scale: 3, // High resolution for sharing
+        backgroundColor: '#FAFAFA',
+        logging: false,
+      });
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          setIsSnapping(false);
+          return;
+        }
+        const file = new File([blob], `mess-finance-${selectedFinanceMonth}.png`, { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: 'Mess Finance Summary',
+              text: `Here is the Mess Finance Summary for ${selectedFinanceMonth}.`,
+              files: [file],
+            });
+          } catch (shareError) {
+            console.log('Share failed/canceled:', shareError);
+            if (shareError.name !== 'AbortError') {
+               triggerDownload(canvas.toDataURL('image/png'));
+            }
+          }
+        } else {
+          // Fallback if browser doesn't support file sharing
+          triggerDownload(canvas.toDataURL('image/png'));
+        }
+        setIsSnapping(false);
+      }, 'image/png');
+    } catch (error) {
+      console.error('Error snapping:', error);
+      setIsSnapping(false);
+    }
+  };
+
   // --- SUBMIT HANDLERS ---
+  const handleBazarScheduleSubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const newSchedule = {
+      id: Date.now(),
+      memberId: parseInt(fd.get('memberId')),
+      startDate: fd.get('startDate'),
+      endDate: fd.get('endDate')
+    };
+    
+    setBazarSchedules(prev => [...prev, newSchedule].sort((a, b) => new Date(a.startDate) - new Date(b.startDate)));
+    setModalType(null);
+  };
+
+  const handleDeleteBazarSchedule = (scheduleId) => {
+    setBazarSchedules(prev => prev.filter(s => s.id !== scheduleId));
+  };
+
   const handleMenuSubmit = (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
+    const b = fd.get('menuBreakfast')?.trim();
+    const l = fd.get('menuLunch')?.trim();
+    const d = fd.get('menuDinner')?.trim();
+
     setDailyMenus(prev => ({
       ...prev,
       [fd.get('menuDate')]: {
-        breakfast: fd.get('menuBreakfast') || "Standard Menu",
-        lunch: fd.get('menuLunch') || "Standard Menu",
-        dinner: fd.get('menuDinner') || "Standard Menu"
+        breakfast: b || "Alur Bhorta & Dal",
+        lunch: l || "Murgir Kala Buna",
+        dinner: d || "Lal Shak, Lau Baji, Dal"
       }
     }));
     setModalType(null);
@@ -217,9 +349,6 @@ export default function App() {
       memberId: memberId
     }, ...expenses]);
 
-    setMemberFinances(prev => prev.map(m => 
-      m.id === memberId ? { ...m, bazarAmount: m.bazarAmount + amount } : m
-    ));
     setModalType(null);
   };
 
@@ -233,18 +362,6 @@ export default function App() {
     
     const dateObj = new Date(newRawDate);
     const newMember = memberFinances.find(m => m.id === newMemberId);
-
-    // Revert old expense amount from old member, and add new amount to new member
-    setMemberFinances(prev => prev.map(m => {
-      let newBazarAmount = m.bazarAmount;
-      if (m.id === editingExpense.memberId) {
-        newBazarAmount -= editingExpense.amount;
-      }
-      if (m.id === newMemberId) {
-        newBazarAmount += newAmount;
-      }
-      return { ...m, bazarAmount: newBazarAmount };
-    }));
 
     setExpenses(prev => prev.map(exp => 
       exp.id === editingExpense.id ? {
@@ -263,15 +380,6 @@ export default function App() {
   };
 
   const handleDeleteBazar = (expenseId) => {
-    const expenseToDelete = expenses.find(e => e.id === expenseId);
-    if (!expenseToDelete) return;
-
-    setMemberFinances(prev => prev.map(m => 
-      m.id === expenseToDelete.memberId 
-        ? { ...m, bazarAmount: m.bazarAmount - expenseToDelete.amount } 
-        : m
-    ));
-
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
     setModalType(null);
     setEditingExpense(null);
@@ -283,9 +391,14 @@ export default function App() {
     const memberId = parseInt(fd.get('memberId'));
     const amount = parseFloat(fd.get('amount'));
 
-    setMemberFinances(prev => prev.map(m => 
-      m.id === memberId ? { ...m, bazarAmount: m.bazarAmount + amount } : m
-    ));
+    setDeposits([{
+      id: Date.now(),
+      memberId,
+      amount,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+      rawDate: getFormattedDateStr(new Date())
+    }, ...deposits]);
+
     setModalType(null);
   };
 
@@ -309,8 +422,8 @@ export default function App() {
     setMemberFinances(prev => [...prev, {
       id: newId, 
       name: fd.get('name'), 
-      bazarAmount: 0, 
-      totalMeals: 0
+      totalMeals: 0,
+      manualCreditAdjustment: 0
     }]);
     
     setMemberSchedules(prev => [...prev, {
@@ -328,13 +441,17 @@ export default function App() {
     const fd = new FormData(e.target);
     const id = editingMember.id;
 
+    const targetCredit = parseFloat(fd.get('bazarAmount')) || 0;
+    const currentDerived = getMemberCredit(id) - (editingMember.manualCreditAdjustment || 0);
+    const newAdjustment = targetCredit - currentDerived;
+
     setMemberFinances(prev => prev.map(m => {
       if (m.id === id) {
         return {
           ...m,
           name: fd.get('name'),
-          bazarAmount: parseFloat(fd.get('bazarAmount')) || 0,
-          totalMeals: parseFloat(fd.get('totalMeals')) || 0
+          totalMeals: parseFloat(fd.get('totalMeals')) || 0,
+          manualCreditAdjustment: newAdjustment
         };
       }
       return m;
@@ -347,6 +464,7 @@ export default function App() {
     setMemberFinances(prev => prev.filter(m => m.id !== memberId));
     setMemberSchedules(prev => prev.filter(s => s.memberId !== memberId));
     setMealExceptions(prev => prev.filter(e => e.memberId !== memberId));
+    setBazarSchedules(prev => prev.filter(b => b.memberId !== memberId));
     setModalType(null);
     setEditingMember(null);
   };
@@ -391,7 +509,7 @@ export default function App() {
       const actualMealCost = m.totalMeals * currentMealRate;
       return {
         ...m,
-        settlementAdjustment: isSettling ? (actualMealCost - m.bazarAmount) : 0
+        settlementAdjustment: isSettling ? (actualMealCost - getMemberCredit(memberId)) : 0
       };
     }));
   };
@@ -403,7 +521,6 @@ export default function App() {
       <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-800">
         <div className="mx-auto w-full h-[100dvh] md:h-[800px] md:max-w-[400px] md:my-4 bg-[#FAFAFA] md:rounded-[2.5rem] md:shadow-2xl relative overflow-hidden flex flex-col justify-center px-8 md:border md:border-gray-200 transition-all">
           
-          {/* Ambient Top Glow Blobs */}
           <div className="absolute top-0 inset-x-0 h-64 pointer-events-none overflow-hidden z-0">
             <div className="absolute -top-10 -left-20 w-64 h-64 bg-[#0060E5]/10 rounded-full blur-[60px]"></div>
             <div className="absolute top-10 -right-16 w-56 h-56 bg-[#FC0075]/10 rounded-full blur-[50px]"></div>
@@ -457,10 +574,33 @@ export default function App() {
   }
 
   const renderHomeTab = () => {
+    // Determine the current menu dynamically, falling back to the requested examples
     const currentMenu = dailyMenus[selectedDateStr] || {
-      breakfast: "Standard Menu",
-      lunch: "Standard Menu",
-      dinner: "Standard Menu"
+      breakfast: "Ex: Alur Bhorta & Dal",
+      lunch: "Ex: Murgir Kala Buna",
+      dinner: "Ex: Lal Shak, Lau Baji, Dal"
+    };
+
+    // Dynamically calculate total meals for the ENTIRE mess for the selected date
+    let totalBreakfast = 0;
+    let totalLunch = 0;
+    let totalDinner = 0;
+
+    if (!isSelectedHoliday) {
+      memberFinances.forEach(member => {
+        const schedule = memberSchedules.find(s => s.memberId === member.id)?.schedule[selectedDayName] || { breakfast: 0, lunch: 0, dinner: 0 };
+        const exception = mealExceptions.find(e => e.memberId === member.id && e.date === selectedDateStr);
+
+        totalBreakfast += exception?.breakfast !== undefined ? exception.breakfast : schedule.breakfast;
+        totalLunch += exception?.lunch !== undefined ? exception.lunch : schedule.lunch;
+        totalDinner += exception?.dinner !== undefined ? exception.dinner : schedule.dinner;
+      });
+    }
+
+    const displayedMeals = {
+      breakfast: totalBreakfast,
+      lunch: totalLunch,
+      dinner: totalDinner,
     };
 
     return (
@@ -474,10 +614,40 @@ export default function App() {
               Hungry Bachelors
             </h1>
           </div>
-          <button className="relative p-2 text-[#052065] hover:bg-white/50 rounded-full transition shadow-sm backdrop-blur-sm bg-white/30 border border-white/50">
-            <Bell size={20} strokeWidth={1.5} />
-            <span className="absolute top-1.5 right-2 w-2 h-2 bg-[#FC0075] rounded-full shadow-[0_0_8px_rgba(252,0,117,0.8)]"></span>
-          </button>
+          
+          {/* Notification Bell Container */}
+          <div className="relative flex items-center">
+            <button 
+              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              className="relative p-2 text-[#052065] hover:bg-white/50 rounded-full transition shadow-sm backdrop-blur-sm bg-white/30 border border-white/50"
+            >
+              <Bell size={20} strokeWidth={1.5} />
+              {hasActiveNotification && <span className="absolute top-1.5 right-2 w-2 h-2 bg-[#FC0075] rounded-full shadow-[0_0_8px_rgba(252,0,117,0.8)]"></span>}
+            </button>
+
+            {/* Notification Popover Bubble */}
+            {isNotificationOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsNotificationOpen(false)}
+                ></div>
+                <div className="absolute right-full mr-3 top-0 w-[220px] bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-gray-100 p-4 z-50 animate-in slide-in-from-right-2 fade-in duration-200">
+                  {/* Speech bubble arrow pointing right */}
+                  <div className="absolute top-4 -right-1.5 w-3 h-3 bg-white border-t border-r border-gray-100 rotate-45 transform origin-center"></div>
+                  
+                  <div className="relative z-10">
+                    <h4 className="text-[10px] font-extrabold text-[#FC0075] uppercase tracking-widest mb-1.5">
+                      {notificationTitle}
+                    </h4>
+                    <p className="text-xs font-bold text-[#052065] leading-snug">
+                      {notificationMsg}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-3 px-1">
@@ -538,13 +708,13 @@ export default function App() {
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-[11px] font-bold uppercase tracking-wide ${displayedMeals.breakfast > 0 ? 'text-[#052065]' : 'text-gray-400'}`}>Breakfast</span>
-                  <span className="text-xs text-gray-500 font-medium">{isSelectedHoliday ? "Closed for Holiday" : currentMenu.breakfast}</span>
+                  <span className="text-xs text-gray-500 font-medium mt-0.5">{isSelectedHoliday ? "Closed for Holiday" : currentMenu.breakfast}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end">
                 {displayedMeals.breakfast > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#0060E5] mb-1 shadow-[0_0_6px_rgba(0,96,229,0.6)]"></span>}
                 <span className={`text-sm font-bold ${displayedMeals.breakfast > 0 ? 'text-[#052065]' : 'text-gray-300'}`}>
-                  {displayedMeals.breakfast > 0 ? `${displayedMeals.breakfast} Meal` : 'Off'}
+                  {displayedMeals.breakfast > 0 ? `${displayedMeals.breakfast} ${displayedMeals.breakfast <= 1 ? 'Meal' : 'Meals'}` : 'Off'}
                 </span>
               </div>
             </div>
@@ -561,13 +731,13 @@ export default function App() {
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-[11px] font-bold uppercase tracking-wide ${displayedMeals.lunch > 0 ? 'text-[#052065]' : 'text-gray-400'}`}>Lunch</span>
-                  <span className="text-xs text-gray-500 font-medium">{isSelectedHoliday ? "Closed for Holiday" : currentMenu.lunch}</span>
+                  <span className="text-xs text-gray-500 font-medium mt-0.5">{isSelectedHoliday ? "Closed for Holiday" : currentMenu.lunch}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end">
                 {displayedMeals.lunch > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#0060E5] mb-1 shadow-[0_0_6px_rgba(0,96,229,0.6)]"></span>}
                 <span className={`text-sm font-bold ${displayedMeals.lunch > 0 ? 'text-[#052065]' : 'text-gray-300'}`}>
-                  {displayedMeals.lunch > 0 ? `${displayedMeals.lunch} Meal` : 'Off'}
+                  {displayedMeals.lunch > 0 ? `${displayedMeals.lunch} ${displayedMeals.lunch <= 1 ? 'Meal' : 'Meals'}` : 'Off'}
                 </span>
               </div>
             </div>
@@ -584,13 +754,13 @@ export default function App() {
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-[11px] font-bold uppercase tracking-wide ${displayedMeals.dinner > 0 ? 'text-[#052065]' : 'text-gray-400'}`}>Dinner</span>
-                  <span className="text-xs text-gray-500 font-medium">{isSelectedHoliday ? "Closed for Holiday" : currentMenu.dinner}</span>
+                  <span className="text-xs text-gray-500 font-medium mt-0.5">{isSelectedHoliday ? "Closed for Holiday" : currentMenu.dinner}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end">
                 {displayedMeals.dinner > 0 && <span className="w-1.5 h-1.5 rounded-full bg-[#0060E5] mb-1 shadow-[0_0_6px_rgba(0,96,229,0.6)]"></span>}
                 <span className={`text-sm font-bold ${displayedMeals.dinner > 0 ? 'text-[#052065]' : 'text-gray-300'}`}>
-                  {displayedMeals.dinner > 0 ? `${displayedMeals.dinner} Meal` : 'Off'}
+                  {displayedMeals.dinner > 0 ? `${displayedMeals.dinner} ${displayedMeals.dinner <= 1 ? 'Meal' : 'Meals'}` : 'Off'}
                 </span>
               </div>
             </div>
@@ -619,7 +789,12 @@ export default function App() {
                     <ShoppingBag size={16} strokeWidth={1.5} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-[#052065] text-sm">{expense.name}</h4>
+                    <h4 
+                      onClick={() => { setEditingExpense(expense); setModalType('editBazar'); }}
+                      className="font-bold text-[#052065] text-sm cursor-pointer hover:text-[#0060E5] transition-colors"
+                    >
+                      {expense.name}
+                    </h4>
                     <p className="text-[10px] text-gray-500 mt-0.5 font-medium">{expense.date} • <span className="text-[#0060E5]">{expense.memberName}</span></p>
                   </div>
                 </div>
@@ -642,119 +817,136 @@ export default function App() {
 
   const renderExpensesTab = () => {
     let displayFinances = memberFinances;
-    if (selectedFinanceMonth !== '2026-03' && historicalFinances[selectedFinanceMonth]) {
-      displayFinances = historicalFinances[selectedFinanceMonth];
-    }
 
     return (
       <div className="flex flex-col gap-6 pb-[100px] pt-10 px-4 sm:px-6 relative z-10">
-        <div className="flex justify-between items-end border-b border-gray-100 pb-4 px-1">
-          <div>
-            <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Finances</h2>
-            <p className="text-xs text-gray-500 font-medium">Monthly balance summary</p>
-          </div>
-          <div className="relative">
-            <select
-              value={selectedFinanceMonth}
-              onChange={(e) => setSelectedFinanceMonth(e.target.value)}
-              className="appearance-none bg-white/80 backdrop-blur-sm border border-gray-200 text-[#052065] text-[10px] font-bold rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-[#0060E5] shadow-sm transition-colors cursor-pointer uppercase tracking-wider"
-            >
-              <option value="2026-03">March 2026</option>
-              <option value="2026-02">Feb 2026</option>
-              <option value="2026-01">Jan 2026</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400">
-              <ChevronDown size={14} strokeWidth={2} />
+        
+        {/* Container explicitly sized/styled for html2canvas to capture correctly */}
+        <div id="finance-summary-container" className="flex flex-col gap-6 bg-[#FAFAFA] p-2 -mx-2 rounded-2xl relative">
+          <div className="flex justify-between items-end border-b border-gray-100 pb-4 px-1">
+            <div>
+              <h2 className="text-2xl font-bold text-[#052065] tracking-tight">Finances</h2>
+              <p className="text-xs text-gray-500 font-medium">Monthly balance summary</p>
+            </div>
+            
+            <div className="flex flex-col items-end gap-2">
+              <button 
+                onClick={handleSnap}
+                data-html2canvas-ignore="true"
+                disabled={isSnapping}
+                className="flex items-center gap-1.5 bg-[#00B991]/10 text-[#00B991] px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-[#00B991]/20 disabled:opacity-50 active:scale-95"
+              >
+                <Camera size={14} strokeWidth={2.5}/> {isSnapping ? 'Snapping...' : 'Snap & Share'}
+              </button>
+
+              <div className="relative" data-html2canvas-ignore="true">
+                <select
+                  value={selectedFinanceMonth}
+                  onChange={(e) => setSelectedFinanceMonth(e.target.value)}
+                  className="appearance-none bg-white/80 backdrop-blur-sm border border-gray-200 text-[#052065] text-[10px] font-bold rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:border-[#0060E5] shadow-sm transition-colors cursor-pointer uppercase tracking-wider"
+                >
+                  <option value="2026-03">March 2026</option>
+                  <option value="2026-02">Feb 2026</option>
+                  <option value="2026-01">Jan 2026</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400">
+                  <ChevronDown size={14} strokeWidth={2} />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex flex-col gap-4">
-          {displayFinances.map(member => {
-            const computedMealCost = selectedFinanceMonth === '2026-03' 
-              ? (member.totalMeals * currentMealRate) 
-              : member.mealCost || 0; 
+          <div className="flex flex-col gap-4">
+            {displayFinances.map(member => {
+              // Fresh calculation directly from the current expenses array!
+              const memberCredit = getMemberCredit(member.id);
+              const computedMealCost = selectedFinanceMonth === '2026-03' 
+                ? (member.totalMeals * currentMealRate) 
+                : 0; 
 
-            const effectiveBazar = member.bazarAmount + (member.settlementAdjustment || 0);
-            const balance = effectiveBazar - computedMealCost;
-            
-            const isReturnable = balance > 1; 
-            const isPayable = balance < -1;
-            const absBalance = Math.abs(balance);
-            const hasManualSettlement = (member.settlementAdjustment || 0) !== 0;
+              const effectiveBazar = memberCredit + (member.settlementAdjustment || 0);
+              const balance = effectiveBazar - computedMealCost;
+              
+              const isReturnable = balance > 1; 
+              const isPayable = balance < -1;
+              const absBalance = Math.abs(balance);
+              const hasManualSettlement = (member.settlementAdjustment || 0) !== 0;
 
-            return (
-              <div key={member.id} className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-white shadow-lg shadow-gray-200/40 flex flex-col gap-4 transition-all">
-                <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[#052065] text-white flex items-center justify-center font-bold text-sm shadow-md">
-                      {member.name.charAt(0)}
+              return (
+                <div key={member.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-lg shadow-gray-200/40 flex flex-col gap-4 transition-all">
+                  <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#052065] text-white flex items-center justify-center font-bold text-sm shadow-md">
+                        {member.name.charAt(0)}
+                      </div>
+                      <div>
+                        <span className="font-bold text-[#052065] block text-sm">{member.name}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">{member.totalMeals || 0} meals</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-[#052065] block text-sm">{member.name}</span>
-                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">{member.totalMeals || 0} meals</span>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Bazar / Deposit</span>
+                      <span className="text-sm font-bold text-[#052065]">৳{memberCredit.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Bazar / Deposit</span>
-                    <span className="text-sm font-bold text-[#052065]">৳{member.bazarAmount.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</span>
+                  
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Meal Cost</span>
+                      <span className="text-sm font-bold text-gray-700">৳{computedMealCost.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</span>
+                    </div>
+
+                    {isReturnable && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-[#00B991] uppercase tracking-widest mb-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00B991]"></span> Returnable
+                        </span>
+                        <span className="text-lg font-bold text-[#008848] tracking-tight">৳{absBalance.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
+                      </div>
+                    )}
+
+                    {isPayable && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-[#F33131] uppercase tracking-widest mb-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#F33131]"></span> Payable
+                        </span>
+                        <span className="text-lg font-bold text-[#F33131] tracking-tight">৳{absBalance.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
+                      </div>
+                    )}
+
+                    {(!isReturnable && !isPayable) && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status</span>
+                        <span className="text-sm font-bold text-[#00B991] flex items-center gap-1">
+                          <CheckCircle2 size={14} strokeWidth={2.5} /> Settled
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                  {selectedFinanceMonth === '2026-03' && !hasManualSettlement && (isReturnable || isPayable) && (
+                    <button 
+                      data-html2canvas-ignore="true"
+                      onClick={() => handleToggleSettle(member.id, true)}
+                      className="w-full mt-1 py-2.5 rounded-xl border border-dashed border-gray-300 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-[#0060E5] hover:text-[#0060E5] hover:bg-blue-50/50 transition-all active:scale-[0.98]"
+                    >
+                      Mark as Settled
+                    </button>
+                  )}
+
+                  {selectedFinanceMonth === '2026-03' && hasManualSettlement && (
+                    <button 
+                      data-html2canvas-ignore="true"
+                      onClick={() => handleToggleSettle(member.id, false)}
+                      className="w-full mt-1 py-2.5 rounded-xl border border-dashed border-gray-300 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-[#F33131] hover:text-[#F33131] hover:bg-red-50/50 transition-all active:scale-[0.98]"
+                    >
+                      Undo Settle
+                    </button>
+                  )}
                 </div>
-                
-                <div className="flex justify-between items-end">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Meal Cost</span>
-                    <span className="text-sm font-bold text-gray-700">৳{computedMealCost.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})}</span>
-                  </div>
-
-                  {isReturnable && (
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-bold text-[#00B991] uppercase tracking-widest mb-1 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#00B991]"></span> Returnable
-                      </span>
-                      <span className="text-lg font-bold text-[#008848] tracking-tight">৳{absBalance.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
-                    </div>
-                  )}
-
-                  {isPayable && (
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-bold text-[#F33131] uppercase tracking-widest mb-1 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#F33131]"></span> Payable
-                      </span>
-                      <span className="text-lg font-bold text-[#F33131] tracking-tight">৳{absBalance.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
-                    </div>
-                  )}
-
-                  {(!isReturnable && !isPayable) && (
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status</span>
-                      <span className="text-sm font-bold text-[#00B991] flex items-center gap-1">
-                        <CheckCircle2 size={14} strokeWidth={2.5} /> Settled
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {selectedFinanceMonth === '2026-03' && !hasManualSettlement && (isReturnable || isPayable) && (
-                  <button 
-                    onClick={() => handleToggleSettle(member.id, true)}
-                    className="w-full mt-1 py-2.5 rounded-xl border border-dashed border-gray-300 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-[#0060E5] hover:text-[#0060E5] hover:bg-blue-50/50 transition-all active:scale-[0.98]"
-                  >
-                    Mark as Settled
-                  </button>
-                )}
-
-                {selectedFinanceMonth === '2026-03' && hasManualSettlement && (
-                  <button 
-                    onClick={() => handleToggleSettle(member.id, false)}
-                    className="w-full mt-1 py-2.5 rounded-xl border border-dashed border-gray-300 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:border-[#F33131] hover:text-[#F33131] hover:bg-red-50/50 transition-all active:scale-[0.98]"
-                  >
-                    Undo Settle
-                  </button>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     );
@@ -900,6 +1092,48 @@ export default function App() {
           </div>
         </div>
 
+        {/* Bazar Schedules Section */}
+        <div className="mt-4 pt-4 border-t border-gray-100 px-1">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Bazar Schedule</h3>
+            <button 
+              onClick={() => setModalType('bazarSchedule')}
+              className="text-[#0060E5] hover:text-[#052065] transition-colors p-1"
+            >
+              <Plus size={20} strokeWidth={3} />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {bazarSchedules.length === 0 ? (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 p-6 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 text-center">No bazar scheduled</p>
+            ) : (
+              bazarSchedules.map((schedule) => {
+                const member = memberFinances.find(m => m.id === schedule.memberId);
+                const startStr = new Date(schedule.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const endStr = new Date(schedule.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                return (
+                  <div key={schedule.id} className="bg-white/80 backdrop-blur-sm p-3.5 rounded-xl border border-white shadow-sm flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-[#052065] text-xs">{member?.name || 'Unknown'}</h4>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wide mt-0.5">
+                        {startStr} - {endStr}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteBazarSchedule(schedule.id)}
+                      className="text-gray-400 hover:text-[#F33131] transition-colors p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
         <div className="mt-4 pt-4 border-t border-gray-100 px-1">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Mess Holidays</h3>
@@ -963,7 +1197,7 @@ export default function App() {
               <div>
                 <h4 className="font-bold text-[#052065] text-sm">{member.name}</h4>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">
-                  {member.totalMeals} Meals • ৳{member.bazarAmount} Dep
+                  {member.totalMeals} Meals • ৳{getMemberCredit(member.id)} Dep
                 </p>
               </div>
             </div>
@@ -999,6 +1233,7 @@ export default function App() {
                modalType === 'deposit' ? 'Add Cash Deposit' : 
                modalType === 'meal' ? 'Extra / Guest Meal' : 
                modalType === 'menu' ? 'Set Daily Menu' : 
+               modalType === 'bazarSchedule' ? 'Schedule Bazar' : 
                modalType === 'addMember' ? 'Add New Member' : 
                modalType === 'editMember' ? 'Edit Member Stats' : 
                modalType === 'offDay' ? 'Add Exception' : 'Add Holiday'}
@@ -1131,18 +1366,42 @@ export default function App() {
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Breakfast</label>
-                  <input type="text" name="menuBreakfast" defaultValue={dailyMenus[selectedDateStr]?.breakfast === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.breakfast || "")} placeholder="Breakfast Menu..." className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                  <input type="text" name="menuBreakfast" defaultValue={dailyMenus[selectedDateStr]?.breakfast || ""} placeholder="e.g. Alur Bhorta & Dal" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Lunch</label>
-                  <input type="text" name="menuLunch" defaultValue={dailyMenus[selectedDateStr]?.lunch === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.lunch || "")} placeholder="Lunch Menu..." className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                  <input type="text" name="menuLunch" defaultValue={dailyMenus[selectedDateStr]?.lunch || ""} placeholder="e.g. Murgir Kala Buna" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Dinner</label>
-                  <input type="text" name="menuDinner" defaultValue={dailyMenus[selectedDateStr]?.dinner === "Standard Menu" ? "" : (dailyMenus[selectedDateStr]?.dinner || "")} placeholder="Dinner Menu..." className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                  <input type="text" name="menuDinner" defaultValue={dailyMenus[selectedDateStr]?.dinner || ""} placeholder="e.g. Lal Shak, Lau Baji, Dal" className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
                 </div>
               </div>
               <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Update Menus</button>
+            </form>
+          )}
+
+          {/* BAZAR SCHEDULE FORM */}
+          {modalType === 'bazarSchedule' && (
+            <form onSubmit={handleBazarScheduleSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Assign Member</label>
+                <select name="memberId" required className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors">
+                  <option value="">Select a member...</option>
+                  {memberFinances.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Start Date</label>
+                  <input type="date" name="startDate" defaultValue={selectedDateStr} required className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">End Date</label>
+                  <input type="date" name="endDate" defaultValue={selectedDateStr} required className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-[#0060E5] text-white text-xs font-bold uppercase tracking-[0.15em] rounded-xl py-2.5 mt-2 hover:bg-[#052065] transition-colors shadow-lg shadow-[#0060E5]/20 active:scale-[0.98]">Save Schedule</button>
             </form>
           )}
 
@@ -1167,7 +1426,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Total Deposit (৳)</label>
-                  <input type="number" name="bazarAmount" defaultValue={editingMember.bazarAmount} step="0.01" required className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
+                  <input type="number" name="bazarAmount" defaultValue={getMemberCredit(editingMember.id)} step="0.01" required className="w-full border border-gray-100 rounded-xl p-3.5 text-xs font-bold text-[#052065] bg-gray-50 focus:outline-none focus:border-[#0060E5] focus:bg-white transition-colors" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Total Meals</label>
@@ -1346,6 +1605,7 @@ export default function App() {
     </script>
 </body>
 </html>
+
 
 
 
